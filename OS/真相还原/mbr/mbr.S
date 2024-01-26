@@ -31,7 +31,7 @@ section MBR vstart=0x7c00   ;这里不能加空格
     ; 读取磁盘中的loader到内存中
     mov eax,LOADER_START_SECTOR ; eax 起始的逻辑扇区号
     mov bx,LOADER_BASE_ADDR    ; bx 读取到内存的具体地址
-    mov cx,0x01                ; cx 总读取的扇区数
+    mov cx,0x02                ; cx 总读取的扇区数
     xchg bx,bx
 
     call rd_disk_16
