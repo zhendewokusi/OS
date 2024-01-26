@@ -22,12 +22,9 @@ section MBR vstart=0x7c00   ;这里不能加空格
     mov byte [es:0x06],'l'
     mov byte [es:0x08],'o'
     mov byte [es:0x0a],','
-    mov byte [es:0x0c],'K'
-    mov byte [es:0x0e],'e'
-    mov byte [es:0x10],'r'
-    mov byte [es:0x12],'n'
-    mov byte [es:0x14],'e'
-    mov byte [es:0x16],'l'
+    mov byte [es:0x0c],'M'
+    mov byte [es:0x0e],'B'
+    mov byte [es:0x10],'R'
     
     ; 由于loader的磁盘以及内存地址都是固定的,默认将其放置在MBR下一个扇区以及后面
     ; 所以不需要传入使用哪个通道,以及主从盘之类的数据
