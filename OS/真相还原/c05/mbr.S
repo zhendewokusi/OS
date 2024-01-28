@@ -21,7 +21,7 @@ section MBR vstart=0x7c00   ;这里不能加空格
     mov byte [es:0x04],'l'
     mov byte [es:0x06],'l'
     mov byte [es:0x08],'o'
-    mov byte [es:0x0a],','
+    mov byte [es:0x0a],',' 
     mov byte [es:0x0c],'M'
     mov byte [es:0x0e],'B'
     mov byte [es:0x10],'R'
@@ -31,8 +31,7 @@ section MBR vstart=0x7c00   ;这里不能加空格
     ; 读取磁盘中的loader到内存中
     mov eax,LOADER_START_SECTOR ; eax 起始的逻辑扇区号
     mov bx,LOADER_BASE_ADDR    ; bx 读取到内存的具体地址
-    mov cx,0x02                ; cx 总读取的扇区数
-    xchg bx,bx
+    mov cx,0x05                ; cx 总读取的扇区数
 
     call rd_disk_16
     ; 读取完毕，进入loader
@@ -89,6 +88,7 @@ rd_disk_16:
     in ax,dx
     mov [bx],ax
     add bx,2
+    
     loop .for_memory
 
 .error:
