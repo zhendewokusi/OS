@@ -18,8 +18,8 @@ org	0100h
  LABEL_DESC_NORMAL:		Descriptor	           0,            0ffffh, DA_DRW			; Normal 描述符
  LABEL_DESC_PAGE_DIR:	Descriptor   PageDirBase,              4095, DA_DRW			; 页目录描述符
  LABEL_DESC_PAGE_TBL:	Descriptor   PageTblBase,      4096 * 8 - 1, DA_DRW			; 页表描述符
- LABEL_DESC_CODE32:		Descriptor	           0,  SegCode32Len - 1, DA_C + DA_32	; 非一致代码段, 32
-;  LABEL_DESC_CODE32:		Descriptor	           0,            0ffffh, DA_C + DA_32	; 非一致代码段, 32
+;  LABEL_DESC_CODE32:		Descriptor	           0,  SegCode32Len - 1, DA_C + DA_32	; 非一致代码段, 32
+ LABEL_DESC_CODE32:		Descriptor	           0,            0ffffh, DA_C + DA_32	; 非一致代码段, 32
  LABEL_DESC_CODE16:		Descriptor	           0,            0ffffh, DA_C			; 非一致代码段, 16
  LABEL_DESC_DATA:		Descriptor	           0,	    DataLen - 1, DA_DRW			; Data
  LABEL_DESC_STACK:		Descriptor	           0,        TopOfStack, DA_DRWA + DA_32; Stack, 32 位
@@ -170,14 +170,13 @@ LABEL_MEM_CHK_OK:
 
 	; 为加载 GDTR 作准备
 	xor	eax, eax
-	mov	ax, ds
+	mov	ax, ds	; 这里为什么要将段选择子设置成0
 	shl	eax, 4
 	add	eax, LABEL_GDT		; eax <- gdt 基地址
 	mov	dword [GdtPtr + 2], eax	; [GdtPtr + 2] <- gdt 基地址
 
 	; 加载 GDTR
 	lgdt	[GdtPtr]
-    xchg bx,bx
 
 	; 关中断
 	; cli
@@ -190,7 +189,6 @@ LABEL_MEM_CHK_OK:
 	mov	eax, cr0
 	or	eax, 1
 	mov	cr0, eax
-	xchg bx,bx
 	; 真正进入保护模式
 	jmp	dword SelectorCode32:0	; 执行这一句会把 SelectorCode32 装入 cs, 并跳转到 Code32Selector:0  处
 
@@ -236,6 +234,7 @@ LABEL_SEG_CODE32:
 	; _szPMMessage:db "In Protect Mode now. ^-^", 0Ah, 0Ah, 0 ; 进入保护模式后显示此字符串
 	; szPMMessage equ _szPMMessage - $$ 
 	; $$ == LABEL_DATA
+	xchg bx,bx
 	push	szPMMessage
 	call	DispStr
 	add	esp, 4
@@ -323,7 +322,7 @@ DispMemSize:
 ;	_dwLengthHigh:		dd	0 长度的高32位
 ;	_dwType:			dd	0 这个地址范围的地址类型
 
-	mov	ecx, [dwMCRNumber]; 外循环 for(int i=0;i<[MCRNumber];i++)//每次得到一个ARDS , line_113已经得到其内存数了，cur_line_328，
+	mov	ecx, [dwMCRNumber]; 外循环 for(int i=0;i<[MCRNumber];i++)//每次得到一个ARDS
 	
 .loop:				  ;{ loop 的循环数 == ecx ，上行代码已经赋值
 	mov	edx, 5		  ;  内循环 for(int j=0;j<5;j++) //每次得到一个ARDS中的成员
@@ -337,23 +336,20 @@ DispMemSize:
 	mov	edi, ARDStruct	  ;  {//依次显示BaseAddrLow,BaseAddrHigh,LengthLow,
 	
 .1:				  ;             LengthHigh,Type
-	push	dword [esi]	  ; cur_line_343, line_318 mov	esi, MemChkBuf，offset=esi,esi += 4；
-						  ; line_113在计算内存数时，已经将全部ARDS copy 到 缓冲区了
-						  
+	push	dword [esi]
 	call	DispInt		  ; DispInt(MemChkBuf[j*4]); // 显示一个成员
 	pop	eax		  		  ; 将偏移地址 弹出到 eax
-						  ; cur_line_347, line_340: mov	edi, ARDStruct
-						  
+
 	stosd			 	  ; ARDStruct[j*4] = MemChkBuf[j*4]; eax copy到 edi 指向的目的地址(ARDStruct)
 						  ; 为什么要吧内存段描述符结构体从缓冲区copy到ARDS暂存呢？因为下面代码要用到变量：dwType + dwBaseAddrLow + dwLengthLow
-	add	esi, 4		  	  ;	cur_line_348, line_318 mov	esi, MemChkBuf (256个0的内存空间的偏移地址)
+	add	esi, 4		  	  ; mov	esi, MemChkBuf (256个0的内存空间的偏移地址)
 	dec	edx		 		  ; edx == 总循环次数(5--)
 	cmp	edx, 0		  	  ;
 	jnz	.1		  		  ;  } 就这样循环下去吧，直到为0为止；
 	
 	call	DispReturn	  ;  printf("\n");
 	
-	cmp	dword [dwType], 1 ;  if(Type == AddressRangeMemory)(该段内存可用的话) , 此刻的 dwType 是由line_349从缓冲区写入的,cur_line_357；
+	cmp	dword [dwType], 1
 	jne	.2		  ;  {	  ;  如果该内存不可用的话，跳转到 .2;
 	mov	eax, [dwBaseAddrLow]; 基地址的低32位
 	add	eax, [dwLengthLow]  ; 长度的低32位
