@@ -5,8 +5,8 @@
 
 %include	"protectmode.inc"	; 常量, 宏, 以及一些说明
 
-PageDirBase		equ	200000h	; 页目录开始地址:	2M
-PageTblBase		equ	201000h	; 页表开始地址:		2M + 4K
+PageDirBase		equ	100000h	; 页目录开始地址:	2M
+PageTblBase		equ	101000h	; 页表开始地址:		2M + 4K
 
 org	0100h
 	jmp	LABEL_BEGIN
@@ -18,10 +18,13 @@ org	0100h
  LABEL_DESC_NORMAL:		Descriptor	           0,            0ffffh, DA_DRW			; Normal 描述符
  LABEL_DESC_PAGE_DIR:	Descriptor   PageDirBase,              4095, DA_DRW			; 页目录描述符
  LABEL_DESC_PAGE_TBL:	Descriptor   PageTblBase,      4096 * 8 - 1, DA_DRW			; 页表描述符
+;  LABEL_DESC_PAGE_DIR:	Descriptor   PageDirBase,            0ffffh, DA_DRW			; 页目录描述符
+;  LABEL_DESC_PAGE_TBL:	Descriptor   PageTblBase,            0ffffh, DA_DRW			; 页表描述符
 ;  LABEL_DESC_CODE32:		Descriptor	           0,  SegCode32Len - 1, DA_C + DA_32	; 非一致代码段, 32
  LABEL_DESC_CODE32:		Descriptor	           0,            0ffffh, DA_C + DA_32	; 非一致代码段, 32
  LABEL_DESC_CODE16:		Descriptor	           0,            0ffffh, DA_C			; 非一致代码段, 16
- LABEL_DESC_DATA:		Descriptor	           0,	    DataLen - 1, DA_DRW			; Data
+;  LABEL_DESC_DATA:		Descriptor	           0,	    DataLen - 1, DA_DRW			; Data
+ LABEL_DESC_DATA:		Descriptor	           0,            0ffffh, DA_DRW			; Data
  LABEL_DESC_STACK:		Descriptor	           0,        TopOfStack, DA_DRWA + DA_32; Stack, 32 位
  LABEL_DESC_VIDEO:		Descriptor	     0B8000h,            0ffffh, DA_DRW			; 显存首地址
  ; GDT 结束
@@ -179,7 +182,7 @@ LABEL_MEM_CHK_OK:
 	lgdt	[GdtPtr]
 
 	; 关中断
-	; cli
+	cli
 	; 打开地址线A20
 	in	al, 92h
 	or	al, 00000010b
@@ -202,9 +205,9 @@ LABEL_REAL_ENTRY:		; 从保护模式跳回到实模式就到了这里
 
 	mov	sp, [_wSPValueInRealMode]
 
-	in	al, 92h		; ┓
-	and	al, 11111101b	; ┣ 关闭 A20 地址线
-	out	92h, al		; ┛
+	in	al, 92h
+	and	al, 11111101b	; 关闭 A20 地址线
+	out	92h, al
 
 	sti			; 开中断
 
@@ -234,7 +237,6 @@ LABEL_SEG_CODE32:
 	; _szPMMessage:db "In Protect Mode now. ^-^", 0Ah, 0Ah, 0 ; 进入保护模式后显示此字符串
 	; szPMMessage equ _szPMMessage - $$ 
 	; $$ == LABEL_DATA
-	xchg bx,bx
 	push	szPMMessage
 	call	DispStr
 	add	esp, 4
@@ -242,21 +244,20 @@ LABEL_SEG_CODE32:
 	push	szMemChkTitle ; szMemChkTitle equ	_szMemChkTitle	- $$, _szMemChkTitle: db "BaseAddrL BaseAddrH LengthLow LengthHigh   Type", 0Ah, 0	; 进入保护模式后显示此字符串
 	call	DispStr
 	add	esp, 4
-
 	call	DispMemSize		; 显示内存信息
-
 	call	SetupPaging		; 启动分页机制
 	; 到此停止
 	jmp	SelectorCode16:0
 
 ; 启动分页机制 --------------------------------------------------------------
-SetupPaging:
+SetupPaging_Back:
 	; 根据内存大小计算应初始化多少PDE以及多少页表
 	xor	edx, edx
 	mov	eax, [dwMemSize]
+	xchg bx,bx
 	mov	ebx, 400000h	; 400000h = 4M = 4096 * 1024, 一个页表对应的内存大小
 	div	ebx
-	mov	ecx, eax	; 此时 ecx 为页表的个数，也即 PDE 应该的个数
+	mov	ecx, eax	; 此时 ecx 为页表的个数
 	test	edx, edx
 	jz	.no_remainder
 	inc	ecx		; 如果余数不为 0 就需增加一个页表
@@ -267,15 +268,14 @@ SetupPaging:
 
 	; 首先初始化页目录
 	mov	ax, SelectorPageDir	; 此段首地址为 PageDirBase
-	mov	es, ax
+	mov	es, ax				; es 现在用的是页目录表的段选择子
 	xor	edi, edi
 	xor	eax, eax
 	mov	eax, PageTblBase | PG_P  | PG_USU | PG_RWW
 .1:
-	stosd
+	stosd				; 这里用到了 es:edi
 	add	eax, 4096		; 为了简化, 所有页表在内存中是连续的.
 	loop	.1
-
 	; 再初始化所有页表
 	mov	ax, SelectorPageTbl	; 此段首地址为 PageTblBase
 	mov	es, ax
@@ -286,11 +286,11 @@ SetupPaging:
 	xor	edi, edi
 	xor	eax, eax
 	mov	eax, PG_P  | PG_USU | PG_RWW
+	xchg bx,bx
 .2:
 	stosd
 	add	eax, 4096		; 每一页指向 4K 的空间
 	loop	.2
-
 	mov	eax, PageDirBase
 	mov	cr3, eax
 	mov	eax, cr0
@@ -301,6 +301,60 @@ SetupPaging:
 	nop
 
 	ret
+
+SetupPaging:
+	; 首先初始化页目录
+	mov	ax, SelectorPageDir	; 此段首地址为 PageDirBase
+	mov	es, ax				; es 现在用的是页目录表的段选择子
+	xor	edi, edi
+	xor	eax, eax
+	; 此时eax中存储的是第一个页表的地址
+	mov	eax, PageTblBase | PG_P  | PG_USU | PG_RWW
+	stosd				; 这里用到了 es:edi
+	; 0xc00 以上的目录项属于内核空间
+	mov	edi,0xc00		; 为了简化, 所有页表在内存中是连续的.
+	stosd
+	mov	eax, PageDirBase | PG_P  | PG_USU | PG_RWW
+	mov edi, 4092
+	stosd				; 使最后一个目录项指向页目录表自己的地址
+
+	; 低 1 MB 的页表项
+	mov	ax, SelectorPageTbl	; 此段首地址为 PageTblBase
+	mov	es, ax
+	mov	ecx,256		; 1MB 低端内存 / 4KB = 256
+	mov edi,0
+	mov	eax, PG_P  | PG_USU | PG_RWW
+	xchg bx,bx
+.1:
+	stosd
+	add	eax, 4096
+	loop	.1
+
+;	高 1 GB 内核页表的PDE
+	mov	ax, SelectorPageDir	; 此段首地址为 PageDirBase
+	mov	es, ax				; es 现在用的是页目录表的段选择子	mov eax, PageTblBase
+	mov eax, PageTblBase
+	or  eax, PG_P  | PG_USU | PG_RWW
+	add eax, 0x1000
+	mov ecx, 254
+	mov edi,0xc00 + 4 
+	xchg bx,bx
+
+.2:
+	stosd	; es: edi
+	add eax,0x1000
+	loop .2
+
+	xchg bx,bx
+	mov	eax, PageDirBase
+	mov	cr3, eax
+	mov	eax, cr0
+	or	eax, 80000000h
+	mov	cr0, eax
+	nop
+
+	ret
+
 ; 分页机制启动完毕 ----------------------------------------------------------
 
 
@@ -326,13 +380,6 @@ DispMemSize:
 	
 .loop:				  ;{ loop 的循环数 == ecx ，上行代码已经赋值
 	mov	edx, 5		  ;  内循环 for(int j=0;j<5;j++) //每次得到一个ARDS中的成员
-
-; ARDStruct				equ	_ARDStruct	- $$
-; 	dwBaseAddrLow		equ	_dwBaseAddrLow	- $$
-; 	dwBaseAddrHigh		equ	_dwBaseAddrHigh	- $$
-; 	dwLengthLow			equ	_dwLengthLow	- $$
-; 	dwLengthHigh		equ	_dwLengthHigh	- $$
-; 	dwType				equ	_dwType		- $$
 	mov	edi, ARDStruct	  ;  {//依次显示BaseAddrLow,BaseAddrHigh,LengthLow,
 	
 .1:				  ;             LengthHigh,Type
@@ -340,7 +387,7 @@ DispMemSize:
 	call	DispInt		  ; DispInt(MemChkBuf[j*4]); // 显示一个成员
 	pop	eax		  		  ; 将偏移地址 弹出到 eax
 
-	stosd			 	  ; ARDStruct[j*4] = MemChkBuf[j*4]; eax copy到 edi 指向的目的地址(ARDStruct)
+	stosd			 	  ; ARDStruct[j*4] = MemChkBuf[j*4]; 将 eax copy到 es:edi 指向的目的地址(ARDStruct)
 						  ; 为什么要吧内存段描述符结构体从缓冲区copy到ARDS暂存呢？因为下面代码要用到变量：dwType + dwBaseAddrLow + dwLengthLow
 	add	esi, 4		  	  ; mov	esi, MemChkBuf (256个0的内存空间的偏移地址)
 	dec	edx		 		  ; edx == 总循环次数(5--)
@@ -376,7 +423,7 @@ DispMemSize:
 	pop	esi
 	ret
 
-%include	"lib.inc"	; 库函数
+%include	"lib.inc"	; 显示函数
 
 SegCode32Len	equ	$ - LABEL_SEG_CODE32
 ; END of [SECTION .s32]
