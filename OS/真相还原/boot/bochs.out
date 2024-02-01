@@ -34,7 +34,7 @@
 00000000000i[IMG   ] Disk image modules
 00000000000i[IMG   ]   flat concat sparse dll growing undoable volatile vmware3
 00000000000i[IMG   ]   vmware4 vbox vpc vvfat
-00000000000i[MEM0  ] allocated memory at 0x7eeb4fbdd010. after alignment, vector=0x7eeb4fbde000
+00000000000i[MEM0  ] allocated memory at 0x74171b3dd010. after alignment, vector=0x74171b3de000
 00000000000i[MEM0  ] 512.00MB
 00000000000i[MEM0  ] mem block size = 0x00020000, blocks=4096
 00000000000i[MEM0  ] rom at 0xfffe0000/131072 ('//usr/local/share/bochs/BIOS-bochs-latest')
@@ -45,7 +45,7 @@
 00000000000i[DEV   ] PIIX3 PCI-to-ISA bridge present at device 1, function 0
 00000000000i[PLUGIN] init_dev of 'cmos' plugin device by virtual method
 00000000000i[CMOS  ] Using local time for initial clock
-00000000000i[CMOS  ] Setting initial clock to: Wed Jan 31 23:39:23 2024 (time0=1706715563)
+00000000000i[CMOS  ] Setting initial clock to: Thu Feb  1 14:07:19 2024 (time0=1706767639)
 00000000000i[PLUGIN] init_dev of 'dma' plugin device by virtual method
 00000000000i[DMA   ] channel 4 used by cascade
 00000000000i[PLUGIN] init_dev of 'pic' plugin device by virtual method
@@ -183,7 +183,7 @@
 00000325325i[BIOS  ] ram_end=512MB
 00000366088i[BIOS  ] Found 1 cpu(s)
 00000379741i[BIOS  ] bios_table_addr: 0x000f9d98 end=0x000fcc00
-00000601400i[XGUI  ] charmap update. Font is 9 x 16
+00000605272i[XGUI  ] charmap update. Font is 9 x 16
 00000707557i[PCI   ] i440FX PMC write to PAM register 59 (TLB Flush)
 00001035492i[P2ISA ] PCI IRQ routing: PIRQA# set to 0x0b
 00001035516i[P2ISA ] PCI IRQ routing: PIRQB# set to 0x09
@@ -216,8 +216,6 @@
 00001540599i[BXVGA ] VBE known Display Interface b0c5
 00001543242i[VBIOS ] VBE Bios $Id: vbe.c 292 2021-06-03 12:24:22Z vruppert $
 00001771883i[BIOS  ] ata0-0: PCHS=20/16/63 translation=none LCHS=20/16/63
-00003261428i[XGUI  ] charmap update. Font is 9 x 16
+00002955268i[XGUI  ] charmap update. Font is 9 x 16
 00005205815i[BIOS  ] IDE time out
 00017178811i[BIOS  ] Booting from 0000:7c00
-00017233357i[CPU0  ] [17233357] Stopped on MAGIC BREAKPOINT
-00017233357i[XGUI  ] charmap update. Font is 9 x 16
