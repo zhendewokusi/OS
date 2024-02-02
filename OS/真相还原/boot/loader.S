@@ -9,13 +9,14 @@ PageDirBase		equ	100000h	; 页目录开始地址:	2M
 PageTblBase		equ	101000h	; 页表开始地址:		2M + 4K
 
 org	0100h
+
 	jmp	LABEL_BEGIN
 
 [SECTION .gdt]
  ; GDT
  ;                                         段基址,        段界限     , 属性
  LABEL_GDT:			    Descriptor	           0,                 0, 0				; 空描述符
- LABEL_DESC_NORMAL:		Descriptor	           0,            0ffffh, DA_DRW			; Normal 描述符
+ LABEL_DESC_NORMAL:		Descriptor	           0,            0ffffh, DA_DRWA + DA_32; Normal 描述符
  LABEL_DESC_PAGE_DIR:	Descriptor   PageDirBase,              4095, DA_DRW			; 页目录描述符
  LABEL_DESC_PAGE_TBL:	Descriptor   PageTblBase,      4096 * 8 - 1, DA_DRW			; 页表描述符
 ;  LABEL_DESC_PAGE_DIR:	Descriptor   PageDirBase,            0ffffh, DA_DRW			; 页目录描述符
@@ -250,58 +251,6 @@ LABEL_SEG_CODE32:
 	jmp	SelectorCode16:0
 
 ; 启动分页机制 --------------------------------------------------------------
-SetupPaging_Back:
-	; 根据内存大小计算应初始化多少PDE以及多少页表
-	xor	edx, edx
-	mov	eax, [dwMemSize]
-	xchg bx,bx
-	mov	ebx, 400000h	; 400000h = 4M = 4096 * 1024, 一个页表对应的内存大小
-	div	ebx
-	mov	ecx, eax	; 此时 ecx 为页表的个数
-	test	edx, edx
-	jz	.no_remainder
-	inc	ecx		; 如果余数不为 0 就需增加一个页表
-.no_remainder:
-	push	ecx		; 暂存页表个数
-
-	; 为简化处理, 所有线性地址对应相等的物理地址. 并且不考虑内存空洞.
-
-	; 首先初始化页目录
-	mov	ax, SelectorPageDir	; 此段首地址为 PageDirBase
-	mov	es, ax				; es 现在用的是页目录表的段选择子
-	xor	edi, edi
-	xor	eax, eax
-	mov	eax, PageTblBase | PG_P  | PG_USU | PG_RWW
-.1:
-	stosd				; 这里用到了 es:edi
-	add	eax, 4096		; 为了简化, 所有页表在内存中是连续的.
-	loop	.1
-	; 再初始化所有页表
-	mov	ax, SelectorPageTbl	; 此段首地址为 PageTblBase
-	mov	es, ax
-	pop	eax			; 页表个数
-	mov	ebx, 1024		; 每个页表 1024 个 PTE
-	mul	ebx
-	mov	ecx, eax		; PTE个数 = 页表个数 * 1024
-	xor	edi, edi
-	xor	eax, eax
-	mov	eax, PG_P  | PG_USU | PG_RWW
-	xchg bx,bx
-.2:
-	stosd
-	add	eax, 4096		; 每一页指向 4K 的空间
-	loop	.2
-	mov	eax, PageDirBase
-	mov	cr3, eax
-	mov	eax, cr0
-	or	eax, 80000000h
-	mov	cr0, eax
-	jmp	short .3
-.3:
-	nop
-
-	ret
-
 SetupPaging:
 	; 首先初始化页目录
 	mov	ax, SelectorPageDir	; 此段首地址为 PageDirBase
@@ -324,7 +273,6 @@ SetupPaging:
 	mov	ecx,256		; 1MB 低端内存 / 4KB = 256
 	mov edi,0
 	mov	eax, PG_P  | PG_USU | PG_RWW
-	xchg bx,bx
 .1:
 	stosd
 	add	eax, 4096
@@ -338,19 +286,31 @@ SetupPaging:
 	add eax, 0x1000
 	mov ecx, 254
 	mov edi,0xc00 + 4 
-	xchg bx,bx
 
 .2:
 	stosd	; es: edi
 	add eax,0x1000
 	loop .2
-
+	
+	; 存储到原来 gdt 所有位置
+	sgdt	[GdtPtr]
+	
+	; 修改VIDEO段基址
+	mov ax,SelectorNormal
+	mov ds,ax
+	mov ebx,LABEL_GDT
 	xchg bx,bx
+	or dword [ebx + 0x40 + 4],0xc0000000
+	add esp,0xc0000000
+	add dword [GdtPtr + 2],0xc0000000
+
 	mov	eax, PageDirBase
 	mov	cr3, eax
 	mov	eax, cr0
-	or	eax, 80000000h
+	or	eax, 0x80000000
 	mov	cr0, eax
+	lgdt	[GdtPtr]
+
 	nop
 
 	ret
