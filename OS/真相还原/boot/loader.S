@@ -305,7 +305,8 @@ mem_cpy:
 	mov edi, [ebp + 8]	   ; dst
 	mov esi, [ebp + 12]	   ; src
 	mov ecx, [ebp + 16]	   ; size
-	rep movsb		   ; 逐字节拷贝	; 问题: 越界 limit
+	rep movsb			   ; 逐字节拷贝	  ;问题1: 越界 limit
+										;问题2: 内核栈弄失误,难以映射高地址
 	;恢复环境
 	pop ecx		
 	pop ebp
