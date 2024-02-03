@@ -1,0 +1,63 @@
+➜  kernel git:(main) ✗ readelf main.bin -e
+ELF 头：
+  Magic：  7f 45 4c 46 01 01 01 00 00 00 00 00 00 00 00 00 
+  类别:                              ELF32
+  数据:                              2 补码，小端序 (little endian)
+  Version:                           1 (current)
+  OS/ABI:                            UNIX - System V
+  ABI 版本:                          0
+  类型:                              EXEC (可执行文件)
+  系统架构:                          Intel 80386
+  版本:                              0x1
+  入口点地址：              0xc0001500
+  程序头起点：              52 (bytes into file)
+  Start of section headers:          8528 (bytes into file)
+  标志：             0x0
+  Size of this header:               52 (bytes)
+  Size of program headers:           32 (bytes)
+  Number of program headers:         8
+  Size of section headers:           40 (bytes)
+  Number of section headers:         9
+  Section header string table index: 8
+
+节头：
+  [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
+  [ 0]                   NULL            00000000 000000 000000 00      0   0  0
+  [ 1] .note.gnu.pr[...] NOTE            08048134 000134 000028 00   A  0   0  4
+  [ 2] .text             PROGBITS        c0001500 000500 000013 00  AX  0   0  1
+  [ 3] .eh_frame         PROGBITS        c0002000 001000 000048 00   A  0   0  4
+  [ 4] .got.plt          PROGBITS        c0003ff4 001ff4 00000c 04  WA  0   0  4
+  [ 5] .comment          PROGBITS        00000000 002000 00001b 01  MS  0   0  1
+  [ 6] .symtab           SYMTAB          00000000 00201c 000090 10      7   4  4
+  [ 7] .strtab           STRTAB          00000000 0020ac 000051 00      0   0  1
+  [ 8] .shstrtab         STRTAB          00000000 0020fd 000050 00      0   0  1
+Key to Flags:
+  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
+  L (link order), O (extra OS processing required), G (group), T (TLS),
+  C (compressed), x (unknown), o (OS specific), E (exclude),
+  D (mbind), p (processor specific)
+
+程序头：
+  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+  LOAD           0x000000 0x08048000 0x08048000 0x0015c 0x0015c R   0x1000
+  LOAD           0x000500 0xc0001500 0xc0001500 0x00013 0x00013 R E 0x1000
+  LOAD           0x001000 0xc0002000 0xc0002000 0x00048 0x00048 R   0x1000
+  LOAD           0x001ff4 0xc0003ff4 0xc0003ff4 0x0000c 0x0000c RW  0x1000
+  NOTE           0x000134 0x08048134 0x08048134 0x00028 0x00028 R   0x4
+  GNU_PROPERTY   0x000134 0x08048134 0x08048134 0x00028 0x00028 R   0x4
+  GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RW  0x10
+  GNU_RELRO      0x001ff4 0xc0003ff4 0xc0003ff4 0x0000c 0x0000c R   0x1
+
+ Section to Segment mapping:
+  段节...
+   00     .note.gnu.property 
+   01     .text 
+   02     .eh_frame 
+   03     .got.plt 
+   04     .note.gnu.property 
+   05     .note.gnu.property 
+   06     
+   07     .got.plt 
+
+
+问题:  这里的部分程序头的虚拟地址,比如:0x08048000,在进入kernel之前根本没有其页表的映射关系

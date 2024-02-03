@@ -1,8 +1,3 @@
-; ==========================================
-; pmtest7.asm
-; 编译方法：nasm pmtest7.asm -o pmtest7.com
-; ==========================================
-
 %include	"protectmode.inc"	; 常量, 宏, 以及一些说明
 %include	"boot.inc"
 
@@ -273,8 +268,9 @@ kernel_init:
 	push dword [ebx + 16]		  ; program header中偏移16字节的地方是p_filesz,压入函数memcpy的第三个参数:size
 	mov eax, [ebx + 4]			  ; 距程序头偏移量为4字节的位置是p_offset
 	add eax, KERNEL_BIN_BASE_ADDR	  ; 加上kernel.bin被加载到的物理地址,eax为该段的物理地址
-	push eax				  ; 压入函数memcpy的第二个参数:源地址
+	push eax						  ; 压入函数memcpy的第二个参数:源地址
 	push dword [ebx + 8]			  ; 压入函数memcpy的第一个参数:目的地址,偏移程序头8字节的位置是p_vaddr，这就是目的地址
+	xchg bx,bx
 	
 	call mem_cpy				  ; 调用mem_cpy完成段复制
 	add esp,12				  ; 清理栈中压入的三个参数
@@ -355,7 +351,6 @@ SetupPaging:
 	mov ebx,LABEL_GDT
 	or dword [ebx + 0x40 + 4],0xc0000000
 	add dword [GdtPtr + 2],0xc0000000
-	xchg bx,bx
 	add esp,0xc0000000
 	mov	ax, SelectorData
 	mov	ds, ax			; 数据段选择子
@@ -506,23 +501,6 @@ rd_disk_m_32:
 				; ds没设置好
 	mov [ebx], ax
 	add ebx, 2
-			  ; 由于在实模式下偏移地址为16位,所以用bx只会访问到0~FFFFh的偏移。
-			  ; loader的栈指针为0x900,bx为指向的数据输出缓冲区,且为16位，
-			  ; 超过0xffff后,bx部分会从0开始,所以当要读取的扇区数过大,待写入的地址超过bx的范围时，
-			  ; 从硬盘上读出的数据会把0x0000~0xffff的覆盖，
-			  ; 造成栈被破坏,所以ret返回时,返回地址被破坏了,已经不是之前正确的地址,
-			  ; 故程序出会错,不知道会跑到哪里去。
-			  ; 所以改为ebx代替bx指向缓冲区,这样生成的机器码前面会有0x66和0x67来反转。
-			  ; 0X66用于反转默认的操作数大小! 0X67用于反转默认的寻址方式.
-			  ; cpu处于16位模式时,会理所当然的认为操作数和寻址都是16位,处于32位模式时,
-			  ; 也会认为要执行的指令是32位.
-			  ; 当我们在其中任意模式下用了另外模式的寻址方式或操作数大小(姑且认为16位模式用16位字节操作数，
-			  ; 32位模式下用32字节的操作数)时,编译器会在指令前帮我们加上0x66或0x67，
-			  ; 临时改变当前cpu模式到另外的模式下.
-			  ; 假设当前运行在16位模式,遇到0X66时,操作数大小变为32位.
-			  ; 假设当前运行在32位模式,遇到0X66时,操作数大小变为16位.
-			  ; 假设当前运行在16位模式,遇到0X67时,寻址方式变为32位寻址
-			  ; 假设当前运行在32位模式,遇到0X67时,寻址方式变为16位寻址.
 
 	loop .go_on_read
 	ret
