@@ -22,19 +22,21 @@ org	0100h
 [SECTION .gdt]
  ; GDT
  ;                                         段基址,        段界限     , 属性
- LABEL_GDT:			    Descriptor	           0,                 0, 0				; 空描述符
- LABEL_DESC_NORMAL:		Descriptor	           0,        0xffffffff, DA_DRWA + DA_32; Normal 描述符
- LABEL_DESC_PAGE_DIR:	Descriptor   PageDirBase,              4095, DA_DRW			; 页目录描述符
- LABEL_DESC_PAGE_TBL:	Descriptor   PageTblBase,      4096 * 8 - 1, DA_DRW			; 页表描述符
-;  LABEL_DESC_PAGE_DIR:	Descriptor   PageDirBase,            0ffffh, DA_DRW			; 页目录描述符
-;  LABEL_DESC_PAGE_TBL:	Descriptor   PageTblBase,            0ffffh, DA_DRW			; 页表描述符
-;  LABEL_DESC_CODE32:		Descriptor	           0,  SegCode32Len - 1, DA_C + DA_32	; 非一致代码段, 32
- LABEL_DESC_CODE32:		Descriptor	           0,            0ffffh, DA_C + DA_32	; 非一致代码段, 32
-;  LABEL_DESC_DATA:		Descriptor	           0,	    DataLen - 1, DA_DRW			; Data
- LABEL_DESC_DATA:		Descriptor	           0,            0ffffh, DA_DRW			; Data
- LABEL_DESC_DATA2:		Descriptor	           0,        0xffffffff, DA_DRW			; Data_For_Kernel
- LABEL_DESC_STACK:		Descriptor	           0,        TopOfStack, DA_DRWA + DA_32; Stack, 32 位
- LABEL_DESC_VIDEO:		Descriptor	     0B8000h,            0ffffh, DA_DRW			; 显存首地址
+ LABEL_GDT:			    Descriptor	           0,                 0, 0							; 空描述符
+;  LABEL_DESC_NORMAL: 	Descriptor	           0,            0FFFFFh, DA_DRWA + DA_32			; Normal 描述符
+ LABEL_DESC_NORMAL:		Descriptor 			   0, 			 0FFFFFh, DA_DRWA + DA_LIMIT_4K		; Normal Descriptor
+ LABEL_DESC_PAGE_DIR:	Descriptor   PageDirBase,               4095, DA_DRW					; 页目录描述符
+ LABEL_DESC_PAGE_TBL:	Descriptor   PageTblBase,       4096 * 8 - 1, DA_DRW					; 页表描述符
+;  LABEL_DESC_PAGE_DIR:	Descriptor   PageDirBase,             0FFFFh, DA_DRW					; 页目录描述符
+;  LABEL_DESC_PAGE_TBL:	Descriptor   PageTblBase,             0FFFFh, DA_DRW					; 页表描述符
+;  LABEL_DESC_CODE32:  	Descriptor	           0,   SegCode32Len - 1, DA_C + DA_32				; 非一致代码段, 32
+ LABEL_DESC_CODE32:		Descriptor	           0,            0FFFFFh, DA_C + DA_LIMIT_4K + DA_32; 非一致32位代码段
+;  LABEL_DESC_DATA:		Descriptor	           0,        DataLen - 1, DA_DRW					; Data
+ LABEL_DESC_DATA:		Descriptor	           0,             0FFFFh, DA_DRW					; Data
+ LABEL_DESC_DATA2:		Descriptor	           0,            0FFFFFh, DA_DRW + DA_LIMIT_4K		;Data_For_Kernel
+;  LABEL_DESC_STACK:  	Descriptor	           0,            0FFFFh, DA_DRWA + DA_32			; Stack, 32 位
+ LABEL_DESC_STACK:		Descriptor	           0,        TopOfStack, DA_DRWA + DA_32			; Stack, 32 位
+ LABEL_DESC_VIDEO:		Descriptor	     0B8000h,            0FFFFh, DA_DRW						; 显存首地址
  ; GDT 结束
 
  GdtLen		equ	$ - LABEL_GDT	; GDT长度
@@ -102,7 +104,7 @@ org	0100h
 ALIGN	32
 [bits	32]
 LABEL_STACK:
-	times 512 db 0
+	times 1024 db 0
 
 TopOfStack	equ	$ - LABEL_STACK - 1
 
@@ -195,25 +197,6 @@ LABEL_MEM_CHK_OK:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-LABEL_REAL_ENTRY:		; 从保护模式跳回到实模式就到了这里
-	mov	ax, cs
-	mov	ds, ax
-	mov	es, ax
-	mov	ss, ax
-
-	mov	sp, [_wSPValueInRealMode]
-
-	in	al, 92h
-	and	al, 11111101b	; 关闭 A20 地址线
-	out	92h, al
-
-	sti			; 开中断
-
-	mov	ax, 4c00h	; ┓
-	int	21h		; ┛回到 DOS
-; END of [SECTION .s16]
-
-
 [SECTION .s32]; 32 位代码段. 由实模式跳入.
 [bits	32]
 LABEL_SEG_CODE32:
@@ -251,18 +234,22 @@ LABEL_SEG_CODE32:
 
 	call rd_disk_m_32
 
+
 	mov	ax, SelectorData
 	mov	ds, ax			; 数据段选择子
-
 	call	SetupPaging		; 启动分页机制
+
 	; 在函数里面改栈就错了 ret 不回来
-	; add esp,0xc0000000
+	; xchg bx,bx
+	; push eax
+	; mov eax, [esp+0xc0000000]
 	; jmp dword SelectorCode32:.enter_kernel	  ;为了更新流水线,但是这里为什么会跳到其他地址?
 .enter_kernel:
 	mov ax, SelectorData2
 	mov ds, ax
 	mov es, ax
 	call kernel_init
+	jmp $
 
 
 kernel_init:
@@ -270,7 +257,6 @@ kernel_init:
 	xor ebx, ebx		;ebx记录程序头表地址
 	xor ecx, ecx		;cx记录程序头表中的program header数量
 	xor edx, edx		;dx 记录program header尺寸,即e_phentsize
-	xchg bx,bx
 	mov dx, [KERNEL_BIN_BASE_ADDR + 42]	  ; 偏移文件42字节处的属性是e_phentsize,表示program header大小
 	mov ebx, [KERNEL_BIN_BASE_ADDR + 28]   ; 偏移文件开始部分28字节的地方是e_phoff,表示第1 个program header在文件中的偏移量
 			  ; 其实该值是0x34,不过还是谨慎一点，这里来读取实际值
@@ -305,8 +291,10 @@ mem_cpy:
 	mov edi, [ebp + 8]	   ; dst
 	mov esi, [ebp + 12]	   ; src
 	mov ecx, [ebp + 16]	   ; size
+	xchg bx,bx
 	rep movsb			   ; 逐字节拷贝	  ;问题1: 越界 limit
 										;问题2: 内核栈弄失误,难以映射高地址
+
 	;恢复环境
 	pop ecx		
 	pop ebp
@@ -510,6 +498,7 @@ rd_disk_m_32:
 	mov dx, 0x1f0
   .go_on_read:
 	in ax,dx		
+				; ds没设置好
 	mov [ebx], ax
 	add ebx, 2
 			  ; 由于在实模式下偏移地址为16位,所以用bx只会访问到0~FFFFh的偏移。
