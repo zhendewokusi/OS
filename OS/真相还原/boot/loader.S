@@ -4,6 +4,8 @@
 ; ==========================================
 
 %include	"protectmode.inc"	; 常量, 宏, 以及一些说明
+%include	"boot.inc"
+
 
 PageDirBase		equ	100000h	; 页目录开始地址:	2M
 PageTblBase		equ	101000h	; 页表开始地址:		2M + 4K
@@ -15,7 +17,7 @@ PT_NULL equ 0
 
 
 
-org	0100h
+org	LOADER_BASE_ADDR
 
 	jmp	LABEL_BEGIN
 
@@ -34,8 +36,8 @@ org	0100h
 ;  LABEL_DESC_DATA:		Descriptor	           0,        DataLen - 1, DA_DRW					; Data
  LABEL_DESC_DATA:		Descriptor	           0,             0FFFFh, DA_DRW					; Data
  LABEL_DESC_DATA2:		Descriptor	           0,            0FFFFFh, DA_DRW + DA_LIMIT_4K		;Data_For_Kernel
-;  LABEL_DESC_STACK:  	Descriptor	           0,            0FFFFh, DA_DRWA + DA_32			; Stack, 32 位
- LABEL_DESC_STACK:		Descriptor	           0,        TopOfStack, DA_DRWA + DA_32			; Stack, 32 位
+ LABEL_DESC_STACK:  	Descriptor	           0,            0FFFFFh, DA_DRWA+DA_32+DA_LIMIT_4K  ; Stack, 32 位
+;  LABEL_DESC_STACK:..	Descriptor	           0,        TopOfStack, DA_DRWA + DA_32			; Stack, 32 位
  LABEL_DESC_VIDEO:		Descriptor	     0B8000h,            0FFFFh, DA_DRW						; 显存首地址
  ; GDT 结束
 
@@ -99,16 +101,16 @@ org	0100h
 ; END of [SECTION .data1]
  
 
-; 全局堆栈段
-[SECTION .gs]
-ALIGN	32
-[bits	32]
-LABEL_STACK:
-	times 1024 db 0
+; ; 全局堆栈段
+; [SECTION .gs]
+; ALIGN	32
+; [bits	32]
+; LABEL_STACK:
+; 	times 1024 db 0
 
-TopOfStack	equ	$ - LABEL_STACK - 1
+; TopOfStack	equ	$ - LABEL_STACK - 1
 
-; END of [SECTION .gs]
+; ; END of [SECTION .gs]
 
 
 [SECTION .s16]
@@ -162,14 +164,16 @@ LABEL_MEM_CHK_OK:
 	mov	byte [LABEL_DESC_DATA + 7], ah
 
 	; 初始化堆栈段描述符
-	xor	eax, eax
-	mov	ax, ds
-	shl	eax, 4
-	add	eax, LABEL_STACK
-	mov	word [LABEL_DESC_STACK + 2], ax
-	shr	eax, 16
-	mov	byte [LABEL_DESC_STACK + 4], al
-	mov	byte [LABEL_DESC_STACK + 7], ah
+	; xor	eax, eax
+	; mov	ax, ds
+	; shl	eax, 4
+	; add	eax, LABEL_STACK
+	; mov	word [LABEL_DESC_STACK + 2], ax
+	; shr	eax, 16
+	; mov	byte [LABEL_DESC_STACK + 4], al
+	; mov	byte [LABEL_DESC_STACK + 7], ah
+	
+	
 
 	; 为加载 GDTR 作准备
 	xor	eax, eax
@@ -211,9 +215,8 @@ LABEL_SEG_CODE32:
 	mov	ax, SelectorStack
 	mov	ss, ax			; 堆栈段选择子
 
-	mov	esp, TopOfStack
-
-
+	; mov	esp, TopOfStack
+	mov esp, LOADER_BASE_ADDR
 	; 下面显示一个字符串
 	; _szPMMessage:db "In Protect Mode now. ^-^", 0Ah, 0Ah, 0 ; 进入保护模式后显示此字符串
 	; szPMMessage equ _szPMMessage - $$ 
@@ -238,6 +241,7 @@ LABEL_SEG_CODE32:
 	mov	ax, SelectorData
 	mov	ds, ax			; 数据段选择子
 	call	SetupPaging		; 启动分页机制
+
 
 	; 在函数里面改栈就错了 ret 不回来
 	; xchg bx,bx
@@ -351,7 +355,8 @@ SetupPaging:
 	mov ebx,LABEL_GDT
 	or dword [ebx + 0x40 + 4],0xc0000000
 	add dword [GdtPtr + 2],0xc0000000
-
+	xchg bx,bx
+	add esp,0xc0000000
 	mov	ax, SelectorData
 	mov	ds, ax			; 数据段选择子
 	mov	eax, PageDirBase

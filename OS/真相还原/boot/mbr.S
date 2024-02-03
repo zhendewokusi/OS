@@ -44,10 +44,6 @@ rd_disk_16:
     mov esi,eax
     mov di,cx
     mov ax,cx
-
-123456789
-b400b003
-03b000b4
     mov dx,0x1f2
     out dx,al
     mov cl,8

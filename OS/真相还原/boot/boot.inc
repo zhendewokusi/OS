@@ -1,4 +1,4 @@
-    LOADER_BASE_ADDR equ 0x100
+    LOADER_BASE_ADDR equ 0x8000
     LOADER_START_SECTOR equ 0x1
     
 ;; 159 页有问题
