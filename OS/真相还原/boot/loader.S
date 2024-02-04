@@ -29,7 +29,7 @@ org	LOADER_BASE_ADDR
 ;  LABEL_DESC_CODE32:  	Descriptor	           0,   SegCode32Len - 1, DA_C + DA_32				; 非一致代码段, 32
  LABEL_DESC_CODE32:		Descriptor	           0,            0FFFFFh, DA_C + DA_LIMIT_4K + DA_32; 非一致32位代码段
 ;  LABEL_DESC_DATA:		Descriptor	           0,        DataLen - 1, DA_DRW					; Data
- LABEL_DESC_DATA:		Descriptor	           0,             0FFFFh, DA_DRW					; Data
+ LABEL_DESC_DATA:		Descriptor	           0,             0FFFFh, DA_DRW 		 			; Data
  LABEL_DESC_DATA2:		Descriptor	           0,            0FFFFFh, DA_DRW + DA_LIMIT_4K		;Data_For_Kernel
  LABEL_DESC_STACK:  	Descriptor	           0,            0FFFFFh, DA_DRWA+DA_32+DA_LIMIT_4K  ; Stack, 32 位
 ;  LABEL_DESC_STACK:..	Descriptor	           0,        TopOfStack, DA_DRWA + DA_32			; Stack, 32 位
@@ -250,7 +250,7 @@ LABEL_SEG_CODE32:
 	call kernel_init
 	jmp $
 
-
+; bug 想调试都不行,无所谓了,照抄书上code
 kernel_init:
 	xor eax, eax
 	xor ebx, ebx		;ebx记录程序头表地址
