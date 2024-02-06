@@ -248,6 +248,7 @@ LABEL_SEG_CODE32:
 	mov ds, ax
 	mov es, ax
 	call kernel_init
+	xchg bx,bx
 	jmp KERNEL_ENTRY_POINT
 
 ; bug 想调试都不行,无所谓了,照抄书上code
