@@ -248,7 +248,7 @@ LABEL_SEG_CODE32:
 	mov ds, ax
 	mov es, ax
 	call kernel_init
-	jmp $
+	jmp KERNEL_ENTRY_POINT
 
 ; bug 想调试都不行,无所谓了,照抄书上code
 kernel_init:
@@ -270,7 +270,6 @@ kernel_init:
 	add eax, KERNEL_BIN_BASE_ADDR	  ; 加上kernel.bin被加载到的物理地址,eax为该段的物理地址
 	push eax						  ; 压入函数memcpy的第二个参数:源地址
 	push dword [ebx + 8]			  ; 压入函数memcpy的第一个参数:目的地址,偏移程序头8字节的位置是p_vaddr，这就是目的地址
-	xchg bx,bx
 	
 	call mem_cpy				  ; 调用mem_cpy完成段复制
 	add esp,12				  ; 清理栈中压入的三个参数
@@ -291,7 +290,6 @@ mem_cpy:
 	mov edi, [ebp + 8]	   ; dst
 	mov esi, [ebp + 12]	   ; src
 	mov ecx, [ebp + 16]	   ; size
-	xchg bx,bx
 	rep movsb			   ; 逐字节拷贝	  ;问题1: 越界 limit
 										;问题2: 内核栈弄失误,难以映射高地址
 
