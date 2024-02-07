@@ -46,8 +46,10 @@ out/kernel/main.o:kernel/main.c
 # 	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/init.o kernel/init.c -fno-stack-protector
 
 out/kernel/kernel.bin:out/kernel/main.o out/kernel/print.o 
-	ld -melf_i386  -Ttext 0xc0001500 -e main -o ./out/kernel/kernel.bin \
+	ld -melf_i386  -T kernel.ld -o ./out/kernel/kernel.bin \
     out/kernel/main.o out/kernel/print.o 
+	# ld -melf_i386  -Ttext 0xc0001500 -e main -o ./out/kernel/kernel.bin \
+    # out/kernel/main.o out/kernel/print.o 
 
 build:$(OBJS_BIN) out/kernel/kernel.bin
 

@@ -138,15 +138,15 @@ LABEL_MEM_CHK_FAIL:
 LABEL_MEM_CHK_OK:
 	; 得到内存数 over
 	
-	; 初始化 32 位代码段描述符
-	xor	eax, eax
-	mov	ax, cs
-	shl	eax, 4
-	add	eax, LABEL_SEG_CODE32
-	mov	word [LABEL_DESC_CODE32 + 2], ax
-	shr	eax, 16
-	mov	byte [LABEL_DESC_CODE32 + 4], al
-	mov	byte [LABEL_DESC_CODE32 + 7], ah
+	;; 初始化 32 位代码段描述符
+	; xor	eax, eax
+	; mov	ax, cs
+	; shl	eax, 4
+	; add	eax, LABEL_SEG_CODE32
+	; mov	word [LABEL_DESC_CODE32 + 2], ax
+	; shr	eax, 16
+	; mov	byte [LABEL_DESC_CODE32 + 4], al
+	; mov	byte [LABEL_DESC_CODE32 + 7], ah
 
 	; 初始化数据段描述符
 	xor	eax, eax
@@ -192,7 +192,7 @@ LABEL_MEM_CHK_OK:
 	or	eax, 1
 	mov	cr0, eax
 	; 真正进入保护模式
-	jmp	dword SelectorCode32:0	; 执行这一句会把 SelectorCode32 装入 cs, 并跳转到 Code32Selector:0  处
+	jmp	dword SelectorCode32:LABEL_SEG_CODE32	; 执行这一句会把 SelectorCode32 装入 cs, 并跳转到 Code32Selector:0  处
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -239,7 +239,6 @@ LABEL_SEG_CODE32:
 
 
 	; 在函数里面改栈就错了 ret 不回来
-	; xchg bx,bx
 	; push eax
 	; mov eax, [esp+0xc0000000]
 	; jmp dword SelectorCode32:.enter_kernel	  ;为了更新流水线,但是这里为什么会跳到其他地址?
@@ -247,57 +246,51 @@ LABEL_SEG_CODE32:
 	mov ax, SelectorData2
 	mov ds, ax
 	mov es, ax
-	call kernel_init
+	call init_kernel
+	; mov ax, SelectorData2
+	; mov ds, ax
 	xchg bx,bx
+	mov esp,0xc009f000
 	jmp KERNEL_ENTRY_POINT
 
-; bug 想调试都不行,无所谓了,照抄书上code
-kernel_init:
-	xor eax, eax
-	xor ebx, ebx		;ebx记录程序头表地址
-	xor ecx, ecx		;cx记录程序头表中的program header数量
-	xor edx, edx		;dx 记录program header尺寸,即e_phentsize
-	mov dx, [KERNEL_BIN_BASE_ADDR + 42]	  ; 偏移文件42字节处的属性是e_phentsize,表示program header大小
-	mov ebx, [KERNEL_BIN_BASE_ADDR + 28]   ; 偏移文件开始部分28字节的地方是e_phoff,表示第1 个program header在文件中的偏移量
-			  ; 其实该值是0x34,不过还是谨慎一点，这里来读取实际值
-	add ebx, KERNEL_BIN_BASE_ADDR
-	mov cx, [KERNEL_BIN_BASE_ADDR + 44]    ; 偏移文件开始部分44字节的地方是e_phnum,表示有几个program header
+;初始化内核
+init_kernel:
+   xor eax, eax
+   xor ebx, ebx		;ebx记录程序头表地址
+   xor ecx, ecx		;cx记录程序头表中的program header数量
+   xor edx, edx		;dx 记录program header尺寸,即e_phentsize
+
+   mov dx,[KERNEL_BIN_BASE_ADDR+42];一个program的大小
+   mov ebx,[KERNEL_BIN_BASE_ADDR+28]; 偏移文件开始部分28字节的地方是e_phoff,表示第1 个program header在文件中的偏移量
+   add ebx,KERNEL_BIN_BASE_ADDR
+   mov cx,[KERNEL_BIN_BASE_ADDR+44];表项数目
 .each_segment:
-	cmp byte [ebx + 0x10], PT_NULL		  ; 若p_type等于 PT_NULL,说明此program header未使用。
-	je .PTNULL
-	;为函数memcpy压入参数,参数是从右往左依然压入.函数原型类似于 memcpy(dst,src,size)
-	push dword [ebx + 16]		  ; program header中偏移16字节的地方是p_filesz,压入函数memcpy的第三个参数:size
-	mov eax, [ebx + 4]			  ; 距程序头偏移量为4字节的位置是p_offset
-	add eax, KERNEL_BIN_BASE_ADDR	  ; 加上kernel.bin被加载到的物理地址,eax为该段的物理地址
-	push eax						  ; 压入函数memcpy的第二个参数:源地址
-	push dword [ebx + 8]			  ; 压入函数memcpy的第一个参数:目的地址,偏移程序头8字节的位置是p_vaddr，这就是目的地址
-	
-	call mem_cpy				  ; 调用mem_cpy完成段复制
-	add esp,12				  ; 清理栈中压入的三个参数
+  cmp byte [ebx+0],PT_NULL
+  je .PTNULL
+
+  push dword [ebx+16];表项的尺寸
+  mov eax,[ebx+4];表项距离文件头的偏移量
+  add eax,KERNEL_BIN_BASE_ADDR;
+  push eax;表段的起始地址,源地址
+  push dword[ebx+8];在编译时生成的程序被加载的目的地址
+  call mem_cpy
+  add esp,12;将之前传入的参数丢弃
 .PTNULL:
-	add ebx, edx				  ; edx为program header大小,即e_phentsize,在此ebx指向下一个program header 
-	loop .each_segment
-	ret
-
-;----------  逐字节拷贝 mem_cpy(dst,src,size) ------------
-;输入:栈中三个参数(dst,src,size)
-;输出:无
-;---------------------------------------------------------
+  add ebx,edx
+  loop .each_segment
+  ret
 mem_cpy:
-	cld
-	push ebp
-	mov ebp, esp
-	push ecx		   ; rep指令用到了ecx，但ecx对于外层段的循环还有用，故先入栈备份
-	mov edi, [ebp + 8]	   ; dst
-	mov esi, [ebp + 12]	   ; src
-	mov ecx, [ebp + 16]	   ; size
-	rep movsb			   ; 逐字节拷贝	  ;问题1: 越界 limit
-										;问题2: 内核栈弄失误,难以映射高地址
-
-	;恢复环境
-	pop ecx		
-	pop ebp
-	ret
+   cld 
+   push ebp
+   mov ebp,esp
+   push ecx
+   mov edi, [ebp + 8]	   ; dst
+   mov esi, [ebp + 12]	   ; src
+   mov ecx, [ebp + 16]	   ; size
+   rep movsb
+   pop ecx
+   pop ebp
+   ret
 
 ; 启动分页机制 --------------------------------------------------------------
 SetupPaging:
