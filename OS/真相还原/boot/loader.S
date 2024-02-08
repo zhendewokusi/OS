@@ -255,42 +255,42 @@ LABEL_SEG_CODE32:
 
 ;初始化内核
 init_kernel:
-   xor eax, eax
-   xor ebx, ebx		;ebx记录程序头表地址
-   xor ecx, ecx		;cx记录程序头表中的program header数量
-   xor edx, edx		;dx 记录program header尺寸,即e_phentsize
-
-   mov dx,[KERNEL_BIN_BASE_ADDR+42];一个program的大小
-   mov ebx,[KERNEL_BIN_BASE_ADDR+28]; 偏移文件开始部分28字节的地方是e_phoff,表示第1 个program header在文件中的偏移量
-   add ebx,KERNEL_BIN_BASE_ADDR
-   mov cx,[KERNEL_BIN_BASE_ADDR+44];表项数目
+	xor eax, eax
+	xor ebx, ebx		;ebx记录程序头表地址
+	xor ecx, ecx		;cx记录程序头表中的program header数量
+	xor edx, edx		;dx 记录program header尺寸,即e_phentsize
+	mov dx,[KERNEL_BIN_BASE_ADDR+42];一个program的大小
+	mov ebx,[KERNEL_BIN_BASE_ADDR+28]; 偏移文件开始部分28字节的地方是e_phoff,表示第1 个program header在文件中的偏移量
+	add ebx,KERNEL_BIN_BASE_ADDR
+	mov cx,[KERNEL_BIN_BASE_ADDR+44];表项数目
 .each_segment:
-  cmp byte [ebx+0],PT_NULL
-  je .PTNULL
-
-  push dword [ebx+16];表项的尺寸
-  mov eax,[ebx+4];表项距离文件头的偏移量
-  add eax,KERNEL_BIN_BASE_ADDR;
-  push eax;表段的起始地址,源地址
-  push dword[ebx+8];在编译时生成的程序被加载的目的地址
-  call mem_cpy
-  add esp,12;将之前传入的参数丢弃
+	cmp byte [ebx+0],PT_NULL	;p_type 等于 NULL
+	; cmp byte [ebx+10],PT_NULL ;6，错误代码
+	je .PTNULL
+	push dword [ebx+16];表项的尺寸
+	mov eax,[ebx+4];表项距离文件头的偏移量
+	add eax,KERNEL_BIN_BASE_ADDR;
+	push eax;表段的起始地址,源地址
+	push dword[ebx+8];在编译时生成的程序被加载的目的地址
+	call mem_cpy
+	add esp,12;将之前传入的参数丢弃
 .PTNULL:
-  add ebx,edx
-  loop .each_segment
-  ret
+	add ebx,edx
+	loop .each_segment
+	ret
 mem_cpy:
-   cld 
-   push ebp
-   mov ebp,esp
-   push ecx
-   mov edi, [ebp + 8]	   ; dst
-   mov esi, [ebp + 12]	   ; src
-   mov ecx, [ebp + 16]	   ; size
-   rep movsb
-   pop ecx
-   pop ebp
-   ret
+	cld 
+	push ebp
+	mov ebp,esp
+	push ecx
+	mov edi, [ebp + 8]	   ; dst
+	mov esi, [ebp + 12]	   ; src
+	mov ecx, [ebp + 16]	   ; size
+	rep movsb			   ; 逐字节拷贝	  ;问题1: 越界 limit
+								;问题2: 内核栈弄失误,难以映射高地址
+	pop ecx
+	pop ebp
+	ret
 
 ; 启动分页机制 --------------------------------------------------------------
 SetupPaging:
