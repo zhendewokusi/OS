@@ -249,7 +249,7 @@ LABEL_SEG_CODE32:
 	call init_kernel
 	; mov ax, SelectorData2
 	; mov ds, ax
-	xchg bx,bx
+	; xchg bx,bx
 	mov esp,0xc009f000
 	jmp KERNEL_ENTRY_POINT
 

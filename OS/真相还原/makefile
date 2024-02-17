@@ -37,7 +37,7 @@ out/kernel/print.o:lib/kernel/print.S
 
 out/kernel/main.o:kernel/main.c
 	mkdir -p $(dir $@)
-	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/kernel/main.o kernel/main.c -fno-stack-protector
+	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/kernel/main.o kernel/main.c -fno-stack-protector -g
 
 # out/interrupt.o:kernel/interrupt.c
 # 	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/interrupt.o kernel/interrupt.c -fno-stack-protector
@@ -47,7 +47,7 @@ out/kernel/main.o:kernel/main.c
 
 out/kernel/kernel.bin:out/kernel/main.o out/kernel/print.o 
 	ld -melf_i386  -T kernel.ld -o ./out/kernel/kernel.bin \
-    out/kernel/main.o out/kernel/print.o 
+    out/kernel/main.o out/kernel/print.o -g
 	# ld -melf_i386  -Ttext 0xc0001500 -e main -o ./out/kernel/kernel.bin \
     # out/kernel/main.o out/kernel/print.o 
 
