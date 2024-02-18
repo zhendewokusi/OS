@@ -32,22 +32,22 @@ kernel/kernel.i:kernel/kernel.S
 	mkdir -p $(dir $@)
 	nasm -E -o kernel/kernel.i kernel/kernel.S -g
 
-# out/timer.o:device/timer.c
-# 	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -I device -c -fno-builtin -o out/timer.o device/timer.c -fno-stack-protector
+out/timer.o:device/timer.c
+	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -I device -c -fno-builtin -o out/timer.o device/timer.c -fno-stack-protector
 
 out/kernel/main.o:kernel/main.c
 	mkdir -p $(dir $@)
-	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/kernel/main.o kernel/main.c -fno-stack-protector -g
+	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/kernel/main.o kernel/main.c -fno-stack-protector -g -O0
 
 out/interrupt.o:kernel/interrupt.c
-	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/interrupt.o kernel/interrupt.c -fno-stack-protector -g
+	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/interrupt.o kernel/interrupt.c -fno-stack-protector -g -O0
 
 out/init.o:kernel/init.c
-	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/init.o kernel/init.c -fno-stack-protector -g
+	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/init.o kernel/init.c -fno-stack-protector -g -O0
 
-out/kernel/kernel.bin:out/kernel/main.o out/kernel/print.o out/kernel/kernel.o out/init.o out/interrupt.o
+out/kernel/kernel.bin:out/kernel/main.o out/kernel/print.o out/kernel/kernel.o out/init.o out/interrupt.o out/timer.o
 	ld -melf_i386  -T kernel.ld -o ./out/kernel/kernel.bin \
-    out/kernel/main.o out/kernel/print.o out/kernel/kernel.o out/init.o out/interrupt.o -g
+    out/kernel/main.o out/kernel/print.o out/kernel/kernel.o out/init.o out/interrupt.o out/timer.o -g
 
 build:$(OBJS_BIN) out/kernel/kernel.bin
 

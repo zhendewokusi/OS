@@ -20,5 +20,6 @@ int main(void) {
     put_char('\n');
     asm("xchg %bx,%bx");
     init_all();
+    __asm__ __volatile__("sti");	     // 演示中断处理
    while(1);
 }
