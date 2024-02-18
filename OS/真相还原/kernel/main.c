@@ -14,9 +14,11 @@ int main(void) {
     put_char('A');
     put_int(9);
     put_char('\n');
-    asm("xchg %bx,%bx");
     put_int(0x12345678);
     put_char('\n');
     put_int(0x00000000);
+    put_char('\n');
+    asm("xchg %bx,%bx");
+    init_all();
    while(1);
 }

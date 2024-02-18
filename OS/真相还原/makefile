@@ -22,15 +22,15 @@ out/boot/%.bin:boot/%.S
 
 out/kernel/print.o:lib/kernel/print.S
 	mkdir -p $(dir $@)
-	nasm -f elf -o out/kernel/print.o lib/kernel/print.S -I ./lib/kernel/include
+	nasm -f elf -o out/kernel/print.o lib/kernel/print.S -I ./lib/kernel/include -g
 
 out/kernel/kernel.o:kernel/kernel.S
 	mkdir -p $(dir $@)
-	nasm -f elf -o out/kernel/kernel.o kernel/kernel.S
+	nasm -f elf -o out/kernel/kernel.o kernel/kernel.S -g
 
 kernel/kernel.i:kernel/kernel.S
 	mkdir -p $(dir $@)
-	nasm -E -o kernel/kernel.i kernel/kernel.S
+	nasm -E -o kernel/kernel.i kernel/kernel.S -g
 
 # out/timer.o:device/timer.c
 # 	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -I device -c -fno-builtin -o out/timer.o device/timer.c -fno-stack-protector
@@ -39,25 +39,23 @@ out/kernel/main.o:kernel/main.c
 	mkdir -p $(dir $@)
 	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/kernel/main.o kernel/main.c -fno-stack-protector -g
 
-# out/interrupt.o:kernel/interrupt.c
-# 	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/interrupt.o kernel/interrupt.c -fno-stack-protector
+out/interrupt.o:kernel/interrupt.c
+	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/interrupt.o kernel/interrupt.c -fno-stack-protector -g
 
-# out/init.o:kernel/init.c
-# 	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/init.o kernel/init.c -fno-stack-protector
+out/init.o:kernel/init.c
+	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/init.o kernel/init.c -fno-stack-protector -g
 
-out/kernel/kernel.bin:out/kernel/main.o out/kernel/print.o out/kernel/kernel.o
+out/kernel/kernel.bin:out/kernel/main.o out/kernel/print.o out/kernel/kernel.o out/init.o out/interrupt.o
 	ld -melf_i386  -T kernel.ld -o ./out/kernel/kernel.bin \
-    out/kernel/main.o out/kernel/print.o -g
-	# ld -melf_i386  -Ttext 0xc0001500 -e main -o ./out/kernel/kernel.bin \
-    # out/kernel/main.o out/kernel/print.o 
+    out/kernel/main.o out/kernel/print.o out/kernel/kernel.o out/init.o out/interrupt.o -g
 
 build:$(OBJS_BIN) out/kernel/kernel.bin
 
 #定义了一个名为run的目标，依赖于OBJS_BIN，表示要运行程序。
 run: ${OBJS_BIN}
+	objcopy --only-keep-debug out/kernel/kernel.bin kernel.sym
 	make image
 	bochs -f bochsrc.txt
-	
 debug:
 	@echo $(OBJS_BIN)
 	@echo $(I_flags)

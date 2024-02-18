@@ -1,2 +1,3 @@
+set architecture i386
 target remote localhost:1234
-symbol-file out/kernel/kernel.bin
+symbol-file kernel.sym

@@ -9,11 +9,11 @@
 
 #define TI_GDT 0
 #define TI_LDT 1
-
-#define SELECTOR_K_CODE	   ((1 << 3) + (TI_GDT << 2) + RPL0)
-#define SELECTOR_K_DATA	   ((2 << 3) + (TI_GDT << 2) + RPL0)
+// 内核需要的选择子
+#define SELECTOR_K_CODE	   ((4 << 3) + (TI_GDT << 2) + RPL0)
+#define SELECTOR_K_DATA	   ((6 << 3) + (TI_GDT << 2) + RPL0)
 #define SELECTOR_K_STACK   SELECTOR_K_DATA 
-#define SELECTOR_K_GS	   ((3 << 3) + (TI_GDT << 2) + RPL0)
+#define SELECTOR_K_GS	   ((8 << 3) + (TI_GDT << 2) + RPL0)
 
 //--------------   IDT描述符属性  ------------
 #define	 IDT_DESC_P	 1 

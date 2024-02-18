@@ -2,6 +2,8 @@
 %define ERROR_CODE nop
 %define ZERO push 0
 
+extern idt_table		 ;idt_table是C中注册的中断处理程序数组
+
 %macro VECTOR 2
 
 section .text
@@ -21,7 +23,7 @@ intr%1entry:
     ; 保存中断向量号
     push %1
     ; 调用 C 版本的中断处理函数
-    ; call
+    call [idt_table + %1*4]       ; 调用idt_table中的C版本中断处理函数
 .exit:
     add esp,4   ;跳过中断号
     popad
