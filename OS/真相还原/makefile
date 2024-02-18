@@ -24,13 +24,13 @@ out/kernel/print.o:lib/kernel/print.S
 	mkdir -p $(dir $@)
 	nasm -f elf -o out/kernel/print.o lib/kernel/print.S -I ./lib/kernel/include
 
-# out/kernel/kernel.o:kernel/kernel.S
-# 	mkdir -p $(dir $@)
-# 	nasm -f elf -o out/kernel/kernel.o kernel/kernel.S
+out/kernel/kernel.o:kernel/kernel.S
+	mkdir -p $(dir $@)
+	nasm -f elf -o out/kernel/kernel.o kernel/kernel.S
 
-# kernel/kernel.i:kernel/kernel.S
-# 	mkdir -p $(dir $@)
-# 	nasm -E -o kernel/kernel.i kernel/kernel.S
+kernel/kernel.i:kernel/kernel.S
+	mkdir -p $(dir $@)
+	nasm -E -o kernel/kernel.i kernel/kernel.S
 
 # out/timer.o:device/timer.c
 # 	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -I device -c -fno-builtin -o out/timer.o device/timer.c -fno-stack-protector
@@ -45,7 +45,7 @@ out/kernel/main.o:kernel/main.c
 # out/init.o:kernel/init.c
 # 	gcc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/init.o kernel/init.c -fno-stack-protector
 
-out/kernel/kernel.bin:out/kernel/main.o out/kernel/print.o 
+out/kernel/kernel.bin:out/kernel/main.o out/kernel/print.o out/kernel/kernel.o
 	ld -melf_i386  -T kernel.ld -o ./out/kernel/kernel.bin \
     out/kernel/main.o out/kernel/print.o -g
 	# ld -melf_i386  -Ttext 0xc0001500 -e main -o ./out/kernel/kernel.bin \

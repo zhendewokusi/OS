@@ -1,4 +1,6 @@
 #include "print.h"
+#include "init.h"
+
 int main(void) {
     char* buff = "I am kernel\n";
     // put_str("I am kernel\n");
