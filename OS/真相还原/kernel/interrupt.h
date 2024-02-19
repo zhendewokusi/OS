@@ -12,6 +12,8 @@ enum intr_status {
 };
 
 enum intr_status get_intr_status(void);
+enum intr_status set_intr_status(enum intr_status status);
+
 
 
 

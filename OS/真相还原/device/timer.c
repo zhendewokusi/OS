@@ -2,9 +2,10 @@
 #include "io.h"
 #include "print.h"
 
-#define IRQ0_FREQUENCY	   100
+#define IRQ0_FREQUENCY	   1
 #define INPUT_FREQUENCY	   1193180
-#define COUNTER0_VALUE	   INPUT_FREQUENCY / IRQ0_FREQUENCY
+// #define COUNTER0_VALUE	   INPUT_FREQUENCY / IRQ0_FREQUENCY
+#define COUNTER0_VALUE	   5
 #define CONTRER0_PORT	   0x40
 #define COUNTER0_NO	   0
 #define COUNTER_MODE	   2

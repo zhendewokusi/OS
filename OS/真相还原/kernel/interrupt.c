@@ -120,8 +120,22 @@ uint64_t idt_operand = ((sizeof(idt) - 1) | ((uint64_t)(uint32_t)idt << 16));
 asm volatile("lidt %0" : : "m" (idt_operand));
 put_str("idt_init done\n");
 }
+
+// 获取intr状态
 enum intr_status get_intr_status(void) {
-    uint32_t flags;
-    GET_IF(flags);
-    return (flags & IF_FLAG) ? intr_on : intr_off;
+uint32_t flags;
+GET_IF(flags);
+return (flags & IF_FLAG) ? intr_on : intr_off;
+}
+
+// 设置intr状态,并且返回设置后的状态（防止设置失败，多一道检查）
+enum intr_status set_intr_status(enum intr_status status) {
+if(status == intr_on) {
+// 开启中断
+__asm__ __volatile__("sti");
+}else {
+// 关闭中断
+__asm__ __volatile__("cli");
+}
+return get_intr_status();
 }
