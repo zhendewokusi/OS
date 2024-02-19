@@ -12,6 +12,10 @@
 #define PIC_S_DATA 0xa1	       // 从片的数据端口是0xa1
 #define IDT_DESC_CNT 0x21      // 目前总共支持的中断数
 
+#define GET_IF(EFLAG_VAR)  __asm__ __volatile__("pushfl; pop %0" : "=g" (EFLAG_VAR))
+#define IF_FLAG 0x200
+
+
 /*中断门描述符*/
 struct gate_desc {
     uint16_t    func_offset_low_word;    // 低16位置偏移
@@ -115,4 +119,9 @@ pic_init();
 uint64_t idt_operand = ((sizeof(idt) - 1) | ((uint64_t)(uint32_t)idt << 16));
 asm volatile("lidt %0" : : "m" (idt_operand));
 put_str("idt_init done\n");
+}
+enum intr_status get_intr_status(void) {
+    uint32_t flags;
+    GET_IF(flags);
+    return (flags & IF_FLAG) ? intr_on : intr_off;
 }
