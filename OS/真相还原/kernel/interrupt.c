@@ -1,7 +1,7 @@
 #include "interrupt.h"
 #include "print.h"
 #include "stdint.h"
-#include "global.h"
+#include "descriptor.h"
 #include "io.h"
 
 

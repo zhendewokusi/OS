@@ -77,22 +77,22 @@ org	LOADER_BASE_ADDR
  _MemChkBuf:				times	256	db	0
  
  ; 保护模式下使用这些符号
- szPMMessage			equ	_szPMMessage	- $$
- szMemChkTitle			equ	_szMemChkTitle	- $$
+ szPMMessage				equ	_szPMMessage	- $$
+ szMemChkTitle				equ	_szMemChkTitle	- $$
  szRAMSize				equ	_szRAMSize	- $$
  szReturn				equ	_szReturn	- $$
  dwDispPos				equ	_dwDispPos	- $$
  dwMemSize				equ	_dwMemSize	- $$
- dwMCRNumber			equ	_dwMCRNumber	- $$
+ dwMCRNumber				equ	_dwMCRNumber	- $$
  ARDStruct				equ	_ARDStruct	- $$
- 	dwBaseAddrLow		equ	_dwBaseAddrLow	- $$
- 	dwBaseAddrHigh		equ	_dwBaseAddrHigh	- $$
- 	dwLengthLow			equ	_dwLengthLow	- $$
- 	dwLengthHigh		equ	_dwLengthHigh	- $$
- 	dwType				equ	_dwType		- $$
+ dwBaseAddrLow				equ	_dwBaseAddrLow	- $$
+ dwBaseAddrHigh				equ	_dwBaseAddrHigh	- $$
+ dwLengthLow				equ	_dwLengthLow	- $$
+ dwLengthHigh				equ	_dwLengthHigh	- $$
+ dwType					equ	_dwType		- $$
  MemChkBuf				equ	_MemChkBuf	- $$
  
- DataLen			equ	$ - LABEL_DATA
+ DataLen				equ	$ - LABEL_DATA
 ; END of [SECTION .data1]
  
 
@@ -243,6 +243,8 @@ LABEL_SEG_CODE32:
 	; mov eax, [esp+0xc0000000]
 	; jmp dword SelectorCode32:.enter_kernel	  ;为了更新流水线,但是这里为什么会跳到其他地址?
 .enter_kernel:
+	mov esp,0xc009f000
+	push	dword [dwMemSize]
 	mov ax, SelectorData2
 	mov ds, ax
 	mov es, ax
@@ -250,7 +252,6 @@ LABEL_SEG_CODE32:
 	; mov ax, SelectorData2
 	; mov ds, ax
 	; xchg bx,bx
-	mov esp,0xc009f000
 	jmp KERNEL_ENTRY_POINT
 
 ;初始化内核
@@ -415,8 +416,8 @@ DispMemSize:
 	push	szRAMSize	  ; _szRAMSize				db	"RAM size:", 0 ;字符串以 0 结尾
 	call	DispStr		  ;printf("RAM size:");
 	add	esp, 4		  ;
-				  ;
-	push	dword [dwMemSize] ;
+
+	push	dword [dwMemSize]
 	call	DispInt		  ;DispInt(MemSize);
 	add	esp, 4		  ;
 

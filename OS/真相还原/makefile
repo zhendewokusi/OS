@@ -32,25 +32,25 @@ kernel/kernel.i:kernel/kernel.S
 	mkdir -p $(dir $@)
 	nasm -E -o kernel/kernel.i kernel/kernel.S -g
 
-out/kernel/main.o:kernel/main.c
-	mkdir -p $(dir $@)
-	cc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/kernel/main.o kernel/main.c -fno-stack-protector -g -O0
-
 out/kernel/traps.o:kernel/traps.c
-	cc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/kernel/traps.o kernel/tra用于表示系统中可用于分页的物理内存大小。这个值的具体大小可能会因系统配置、内核选项或者编译参数而有所
+	cc -m32 -I include -I include/asm -I include/kernel -c -fno-builtin -o out/kernel/traps.o kernel/traps.c -fno-stack-protector -g -O0
+
 out/lib/string.o:lib/string.c
 	mkdir -p $(dir $@)
-	cc -m32 -I lib/ -I kernel/ -c -fno-builtin -o out/lib/string.o lib/string.c
-	-fno-stack-protector -g -O0
+	cc -m32 -I include -I include/asm -I include/kernel -c -fno-builtin -o out/lib/string.o lib/string.c -fno-stack-protector -g -O0
 
 out/interrupt.o:kernel/interrupt.c
-	cc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/interrupt.o kernel/interrupt.c -fno-stack-protector -g -O0
+	cc -m32 -I include -I include/asm -I include/kernel -c -fno-builtin -o out/interrupt.o kernel/interrupt.c -fno-stack-protector -g -O0
 
 out/init.o:kernel/init.c
-	cc -m32 -I lib/kernel/ -I lib/ -I kernel/ -I device/ -c -fno-builtin -o out/init.o kernel/init.c -fno-stack-protector -g -O0
+	cc -m32 -I include -I include/asm -I include/kernel -I device/ -c -fno-builtin -o out/init.o kernel/init.c -fno-stack-protector -g -O0
 
 out/timer.o:device/timer.c
-	cc -m32 -I lib/kernel/ -I lib/ -I kernel/ -I device -c -fno-builtin -o out/timer.o device/timer.c -fno-stack-protector
+	cc -m32 -I include -I include/asm -I include/kernel -I device -c -fno-builtin -o out/timer.o device/timer.c -fno-stack-protector
+
+out/kernel/main.o:kernel/main.c
+	mkdir -p $(dir $@)
+	cc -m32 -I include -I include/asm -I include/kernel -c -fno-builtin -o out/kernel/main.o kernel/main.c -fno-stack-protector -g -O0
 
 out/kernel/kernel.bin:out/kernel/main.o out/kernel/print.o out/kernel/kernel.o out/init.o out/interrupt.o out/timer.o out/kernel/traps.o out/lib/string.o
 	ld -melf_i386  -T kernel.ld -o ./out/kernel/kernel.bin \

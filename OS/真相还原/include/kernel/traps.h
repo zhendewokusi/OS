@@ -1,6 +1,6 @@
 #ifndef __TRAPS_H__
 #define __TRAPS_H__
-#include "global.h"
+#include "descriptor.h"
 #include "stdint.h"
 
 void kernelDebugInfo(const char * filename,const char * func,int line,const char * condition);
