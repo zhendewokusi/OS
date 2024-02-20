@@ -50,7 +50,7 @@ out/timer.o:device/timer.c
 
 out/kernel/main.o:kernel/main.c
 	mkdir -p $(dir $@)
-	cc -m32 -I include -I include/asm -I include/kernel -c -fno-builtin -o out/kernel/main.o kernel/main.c -fno-stack-protector -g -O0
+	cc -m32 -I include -I include/asm -I include/kernel -c -fno-builtin -o out/kernel/main.o kernel/main.c -fno-stack-protector -g -O0 
 
 out/kernel/kernel.bin:out/kernel/main.o out/kernel/print.o out/kernel/kernel.o out/init.o out/interrupt.o out/timer.o out/kernel/traps.o out/lib/string.o
 	ld -melf_i386  -T kernel.ld -o ./out/kernel/kernel.bin \
