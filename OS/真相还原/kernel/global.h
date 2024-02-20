@@ -24,4 +24,8 @@
 #define	 IDT_DESC_ATTR_DPL0  ((IDT_DESC_P << 7) + (IDT_DESC_DPL0 << 5) + IDT_DESC_32_TYPE)
 #define	 IDT_DESC_ATTR_DPL3  ((IDT_DESC_P << 7) + (IDT_DESC_DPL3 << 5) + IDT_DESC_32_TYPE)
 
+#define __NOP() __asm__ __volatile__("nop")
+#define __STI() __asm__ __volatile__("sti")
+#define __CLI() __asm__ __volatile__("cli")
+#define __MAGIC_BREAK() __asm__ __volatile__("xchg %bx,%bx")
 #endif

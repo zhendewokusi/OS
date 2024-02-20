@@ -7,8 +7,8 @@ void idt_init(void);
 
 // 定义中断目前状态
 enum intr_status {
-    intr_off = 0,
-    intr_on = 1
+        intr_off = 0,
+        intr_on = 1
 };
 
 enum intr_status get_intr_status(void);
