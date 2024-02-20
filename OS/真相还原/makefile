@@ -37,9 +37,7 @@ out/kernel/main.o:kernel/main.c
 	cc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/kernel/main.o kernel/main.c -fno-stack-protector -g -O0
 
 out/kernel/traps.o:kernel/traps.c
-	cc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/kernel/traps.o kernel/traps.c
-	-fno-stack-protector -g -O0
-
+	cc -m32 -I lib/kernel/ -I lib/ -I kernel/ -c -fno-builtin -o out/kernel/traps.o kernel/tra用于表示系统中可用于分页的物理内存大小。这个值的具体大小可能会因系统配置、内核选项或者编译参数而有所
 out/lib/string.o:lib/string.c
 	mkdir -p $(dir $@)
 	cc -m32 -I lib/ -I kernel/ -c -fno-builtin -o out/lib/string.o lib/string.c
