@@ -2,12 +2,12 @@
 #define __BITMAP_H__
 
 #include "stdint.h"
+#define MEMO_SIZE 512
 #define PAGE_SIZE 4096
-// 书上代码是让写4GB的，但是正常这里肯定要按照能分配最多的物理页来.....我该怎么写(泪)...
-#define PAGING_PAGES (mem_size>>12)
+#define PAGING_PAGES (MEMO_SIZE>>12)
+#define 
 
 
-extern uint64_t mem_size;
 extern unsigned char mem_map [ PAGING_PAGES ];
 
 

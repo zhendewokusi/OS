@@ -8,10 +8,11 @@
 #include "string.h"
 
 
-uint64_t mem_size = 0x100000000;
+// uint64_t mem_size = 0x100000000;
+
 
 int main(void) {
-        
+
         // 初始化
         init_all();
 
