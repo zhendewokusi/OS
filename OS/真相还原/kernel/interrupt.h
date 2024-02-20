@@ -1,5 +1,5 @@
-#ifndef __INTERRUPT_H
-#define __INTERRUPT_H
+#ifndef __INTERRUPT_H__
+#define __INTERRUPT_H__
 // #include "stdint.h"
 typedef void* intr_handler;
 // 初始化中断
@@ -11,8 +11,8 @@ enum intr_status {
         intr_on = 1
 };
 
-enum intr_status get_intr_status(void);
-enum intr_status set_intr_status(enum intr_status status);
+extern enum intr_status get_intr_status(void);
+extern enum intr_status set_intr_status(enum intr_status status);
 
 
 

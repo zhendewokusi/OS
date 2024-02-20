@@ -1,5 +1,5 @@
-#ifndef __GLOBAL_H
-#define __GLOBAL_H
+#ifndef __GLOBAL_H__
+#define __GLOBAL_H__
 #include "stdint.h"
 
 #define	 RPL0  0
@@ -23,6 +23,10 @@
 #define	 IDT_DESC_16_TYPE     0x6   // 16位的门
 #define	 IDT_DESC_ATTR_DPL0  ((IDT_DESC_P << 7) + (IDT_DESC_DPL0 << 5) + IDT_DESC_32_TYPE)
 #define	 IDT_DESC_ATTR_DPL3  ((IDT_DESC_P << 7) + (IDT_DESC_DPL3 << 5) + IDT_DESC_32_TYPE)
+
+#ifndef NULL
+#define NULL ((void *) 0)
+#endif
 
 #define __NOP() __asm__ __volatile__("nop")
 #define __STI() __asm__ __volatile__("sti")

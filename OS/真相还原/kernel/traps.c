@@ -2,7 +2,7 @@
 #include "interrupt.h"
 #include "print.h"
 
-int kernelDebugInfo(const char * filename,const char * func,int line,const char * condition)
+void kernelDebugInfo(const char * filename,const char * func,int line,const char * condition)
 {
         // 关中断
         set_intr_status(intr_off);
