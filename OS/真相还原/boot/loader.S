@@ -244,7 +244,7 @@ LABEL_SEG_CODE32:
 	; jmp dword SelectorCode32:.enter_kernel	  ;为了更新流水线,但是这里为什么会跳到其他地址?
 .enter_kernel:
 	mov esp,0xc009f000
-	push	dword [dwMemSize]
+	; push	dword [dwMemSize]
 	mov ax, SelectorData2
 	mov ds, ax
 	mov es, ax

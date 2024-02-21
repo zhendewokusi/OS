@@ -3,23 +3,27 @@
 #include "traps.h"
 #include "string.h"
 
-extern void bitmap_init (unsigned char * bitmap)
+extern void bitmap_init (struct bitmap* btmp)
 {
-        memset(bitmap, 0, PAGING_PAGES);
+        ASSERT(btmp->bits != NULL);
+        memset(btmp->bits, 0, btmp->btmp_bytes_len);
+        // memset(btmp->bits, 0, PAGING_PAGES);    // 这里忘记改了，debug好久
 }
 
-extern bool bitmap_scan_test (unsigned char * bitmap,uint32_t bit_index)
+extern bool bitmap_scan_test (struct bitmap* btmp,uint32_t bit_index)
 {
+        ASSERT(btmp->bits != NULL);
         uint32_t byte_i = bit_index / 8;
         uint32_t bit_i  = bit_index % 8;
-        return (bitmap[byte_i] & (BITMAP_MASK << bit_i));
+        return (btmp->bits[byte_i] & (BITMAP_MASK << bit_i));
 }
 
 // 在位图中申请连续cnt个位,成功则返回其起始位下标，失败返回-1
-extern int bitmap_scan (unsigned char * bitmap,uint32_t cnt)
+extern int bitmap_scan (struct bitmap* btmp,uint32_t cnt)
 {
+        ASSERT(btmp->bits != NULL);
         uint32_t idx_byte = 0;
-        while ((0xff == bitmap[idx_byte]) && (idx_byte < PAGING_PAGES) ) {
+        while ((0xff == btmp->bits[idx_byte]) && (idx_byte < PAGING_PAGES) ) {
                 idx_byte++;
         }
         ASSERT(idx_byte < PAGING_PAGES);
@@ -28,7 +32,7 @@ extern int bitmap_scan (unsigned char * bitmap,uint32_t cnt)
         }
 
         uint32_t idx_bit = 0;
-        while ((uint8_t)(BITMAP_MASK << idx_bit) & bitmap[idx_byte]) {
+        while ((uint8_t)(BITMAP_MASK << idx_bit) & btmp->bits[idx_byte]) {
                 idx_bit++;
         }
         int bit_idx_start = idx_byte * 8 + idx_bit;
@@ -42,7 +46,7 @@ extern int bitmap_scan (unsigned char * bitmap,uint32_t cnt)
 
         bit_idx_start = -1;
         while(bit_left-- > 0) {
-                if(!bitmap_scan_test(bitmap, next_bit)) {
+                if(!bitmap_scan_test(btmp, next_bit)) {
                         count++;
                 } else {
                         count = 0;
@@ -56,13 +60,14 @@ extern int bitmap_scan (unsigned char * bitmap,uint32_t cnt)
         return bit_idx_start;
 }
 
-extern void bitmap_set (unsigned char * bitmap,uint32_t bit_index,uint8_t val) {
+// 正常来说第三个参数应该是bool，书上这么写就这么凑活吧，下面断言排除其他情况就行。
+extern void bitmap_set (struct bitmap* btmp,uint32_t bit_index,uint8_t val) {
         ASSERT((val == 0) || (val == 1));
         uint32_t byte_idx = bit_index / 8;
         uint32_t bit_idx  = bit_index % 8;
         if (val) {
-                bitmap[byte_idx] |= (BITMAP_MASK << bit_idx);
+                btmp->bits[byte_idx] |= (BITMAP_MASK << bit_idx);
         } else {
-                bitmap[byte_idx] &= ~(BITMAP_MASK << bit_idx);
+                btmp->bits[byte_idx] &= ~(BITMAP_MASK << bit_idx);
         }
 }

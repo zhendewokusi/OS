@@ -35,6 +35,9 @@ kernel/kernel.i:kernel/kernel.S
 out/kernel/traps.o:kernel/traps.c
 	cc -m32 -I include -I include/asm -I include/kernel -c -fno-builtin -o out/kernel/traps.o kernel/traps.c -fno-stack-protector -g -O0
 
+out/kernel/memory.o:kernel/memory.c
+	cc -m32 -I include -I include/asm -I include/kernel -c -fno-builtin -o out/kernel/memory.o kernel/memory.c -fno-stack-protector -g -O0
+
 out/lib/string.o:lib/string.c
 	mkdir -p $(dir $@)
 	cc -m32 -I include -I include/asm -I include/kernel -c -fno-builtin -o out/lib/string.o lib/string.c -fno-stack-protector -g -O0
@@ -56,9 +59,9 @@ out/kernel/main.o:kernel/main.c
 	mkdir -p $(dir $@)
 	cc -m32 -I include -I include/asm -I include/kernel -c -fno-builtin -o out/kernel/main.o kernel/main.c -fno-stack-protector -g -O0 
 
-out/kernel/kernel.bin:out/kernel/main.o out/kernel/print.o out/kernel/kernel.o out/init.o out/interrupt.o out/timer.o out/kernel/traps.o out/lib/string.o out/lib/kernel/bitmap.o
+out/kernel/kernel.bin:out/kernel/main.o out/kernel/print.o out/kernel/kernel.o out/init.o out/interrupt.o out/timer.o out/kernel/traps.o out/lib/string.o out/lib/kernel/bitmap.o out/kernel/memory.o
 	ld -melf_i386  -T kernel.ld -o ./out/kernel/kernel.bin \
-    out/kernel/main.o out/kernel/print.o out/kernel/kernel.o out/init.o out/interrupt.o out/timer.o out/kernel/traps.o out/lib/string.o out/lib/kernel/bitmap.o
+    out/kernel/main.o out/kernel/print.o out/kernel/kernel.o out/init.o out/interrupt.o out/timer.o out/kernel/traps.o out/lib/string.o out/lib/kernel/bitmap.o out/kernel/memory.o
 
 build:$(OBJS_BIN) out/kernel/kernel.bin
 
