@@ -2,8 +2,8 @@
 %include	"boot.inc"
 
 
-PageDirBase		equ	100000h	; 页目录开始地址:	2M
-PageTblBase		equ	101000h	; 页表开始地址:		2M + 4K
+PageDirBase		equ	100000h	; 页目录开始地址
+PageTblBase		equ	101000h	; 页表开始地址
 
 KERNEL_START_SECTOR equ 10
 KERNEL_ENTRY_POINT  equ 0xc0001500
