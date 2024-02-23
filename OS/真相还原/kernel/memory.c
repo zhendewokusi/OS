@@ -1,4 +1,5 @@
 #include "memory.h"
+#include <stdint.h>
 #include "print.h"
 #include "stdint.h"
 #include "bitmap.h"
@@ -14,7 +15,7 @@
 #define __KERNEL_HEAP_START__ 0xc0100000
 
 /* 因为0xc009f000是内核主线程栈顶，0xc009e000是内核主线程的pcb.
- * 位图位置安排在地址0xc009a000,这样本系统最大支持4个页框的位图,即512M 
+ * 位图位置安排在地址0xc009a000,这样本 系统最大支持4个页框的位图,即512M 
  * 4kb地址是 0x1000 4个刚好是 0xce000*/
 #define __MEM_BITMAP_BASE__ 0xc009a000
 
@@ -40,16 +41,73 @@ struct virtual_addr kernel_vaddr;	 // 给内核分配虚拟地址使用
 
 
 // 从物理位图中找到一个空闲页并返回其地址
-static void * palloc(struct memo_pool* mempool)
+static void * palloc(struct memo_pool * mempool)
 {
+        uint32_t val = (uint32_t) mempool;
         int bit_index = bitmap_scan(&mempool->pool_bitmap, 1);
         if(bit_index == -1)   return NULL;
         bitmap_set(&mempool->pool_bitmap,bit_index,1);
         uint32_t pg_phyaddr = mempool->phy_addr_start + bit_index * PAGE_SIZE;
-        return (void *) pg_phyaddr;
+
+        return (void *)pg_phyaddr;
 
 }
 
+// 得到虚拟地址vaddr对应的pte的指针
+uint32_t* pte_ptr(uint32_t vaddr)
+{
+        /*
+        * 第一行获取页目录表最后一个项（存页目录表地址）
+        * 第二行获取虚拟地址对应页表的地址
+        * 第三行获取页表内部偏移
+        */
+        uint32_t* pte = (uint32_t*)(0xffc00000 + \
+         ((vaddr & 0xffc00000) >> 10) + \
+         __PTE_INDEX__(vaddr) * 4);
+        return pte;
+}
+
+// 得到虚拟地址vaddr对应的pde的指针
+uint32_t* pde_ptr(uint32_t vaddr)
+{
+        // 高20位为1时候，访问页目录表和页表最后一个（页目录表的地址）
+        // 推导出：访问页目录表自己
+        uint32_t* pde = (uint32_t*)((0xfffff000) + __PDE_INDEX__(vaddr) * 4);
+        return pde;
+}
+
+// 页表中添加虚拟地址与物理地址的映射
+static void page_table_add(void* _vaddr, void* _page_phyaddr) {
+        uint32_t vaddr = (uint32_t)_vaddr, page_phyaddr = (uint32_t)_page_phyaddr;
+        uint32_t* pde = pde_ptr(vaddr);
+        uint32_t* pte = pte_ptr(vaddr);
+
+        // 如果pde没创建时候执行*pte,会访问到空的pde。所以确保pde创建完成后才能执行*pte,
+        // 否则会引发page_fault。因此在*pde为0时,*pte只能出现在下面else语句块中的*pde后面。
+        /* 先在页目录内判断目录项的P位，若为1,则表示该表已存在 */
+        if (*pde & 0x00000001) {	 // 页目录项和页表项的第0位为P,此处判断目录项是否存在
+                ASSERT(!(*pte & 0x00000001));
+                if (!(*pte & 0x00000001)) {   // 正常创建页表 pte不存在
+        	        *pte = (page_phyaddr | PG_US_U | PG_RW_W | PG_P_1);
+                } else {
+                        // 声明一下页表信息被更改了
+                        __KERNEL_DEBUG_INFO__("pte repeat");
+	                *pte = (page_phyaddr | PG_US_U | PG_RW_W | PG_P_1);
+                }
+        } else {
+                uint32_t pde_phyaddr = (uint32_t)palloc(&kernel_pool);
+                *pde = (pde_phyaddr | PG_US_U | PG_RW_W | PG_P_1);
+                /* 分配到的物理页地址pde_phyaddr对应的物理内存清0,防止垃圾数据
+                 * 访问到pde对应的物理地址,用pte取高20位便可.
+                 * 因为pte是基于该pde对应的物理地址内再寻址.*/
+                memset((void*)((int)pte & 0xfffff000), 0, PAGE_SIZE);
+
+                ASSERT(!(*pte & 0x00000001));
+                *pte = (page_phyaddr | PG_US_U | PG_RW_W | PG_P_1);
+   }
+}
+
+// 获取内存池的内存块
 static void * vaddr_get(enum pool_flags pl_flag,uint32_t pg_cnt)
 {
         uint32_t cnt = 0;
@@ -69,7 +127,7 @@ static void * vaddr_get(enum pool_flags pl_flag,uint32_t pg_cnt)
         return (void*)vaddr_start;
 }
 
-
+// 分配一页内存
 void * malloc_page(enum pool_flags pl_flag,uint32_t pg_cnt)
 {
         // 1. 通过vaddr_get在虚拟内存池中申请虚拟地址
@@ -82,17 +140,18 @@ void * malloc_page(enum pool_flags pl_flag,uint32_t pg_cnt)
         // 防止没有申请成功
         if(vaddr_start == NULL) return NULL;
         uint32_t vaddr = (uint32_t) vaddr_start;
-        struct memo_pool * mempool = pl_flag & PF_KERNEL ? &kernel_pool : &user_pool;
+        struct memo_pool * mempool = (pl_flag == PF_KERNEL) ? &kernel_pool : &user_pool;
         while (pg_cnt--) {
                 void * pg_paddr = palloc(mempool);
                 if(pg_paddr == NULL) return NULL;
-                // page_table_add((void*)vaddr,pg_paddr);
+                page_table_add((void*)vaddr,pg_paddr);
                 vaddr += PAGE_SIZE;
         }
         return vaddr_start;
 
 }
 
+// 获取内核内存池一页内存
 void * get_kernel_pge(uint32_t pg_cnt)
 {
         // 参数是无符号...
@@ -106,7 +165,7 @@ void * get_kernel_pge(uint32_t pg_cnt)
 
 
 
-
+// 初始化内存池初始值
 static void mem_pool_init(uint32_t all_mem)
 {
         put_str("   mem_pool_init start\n");
@@ -125,6 +184,10 @@ static void mem_pool_init(uint32_t all_mem)
 
         kernel_pool.phy_addr_start = kp_start;
         user_pool.phy_addr_start = up_start;
+
+        put_char('\n');
+        put_int(kernel_pool.phy_addr_start);
+        put_char('\n');
         kernel_pool.pool_size = kernel_free_pages * PAGE_SIZE;
         user_pool.pool_size = user_free_pages * PAGE_SIZE;
         kernel_pool.pool_bitmap.btmp_bytes_len = kbm_length;
@@ -155,6 +218,7 @@ static void mem_pool_init(uint32_t all_mem)
         put_str("   mem_pool_init done\n");
 }
 
+// 关于内存的初始化函数
 void memo_init()
 {
         put_str("memo start init\n");
