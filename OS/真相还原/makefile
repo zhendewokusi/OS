@@ -67,13 +67,11 @@ build:$(OBJS_BIN) out/kernel/kernel.bin
 
 #定义了一个名为run的目标，依赖于OBJS_BIN，表示要运行程序。
 run: ${OBJS_BIN}
-	objcopy --only-keep-debug out/kernel/kernel.bin kernel.sym
 	make image
 	bochs -f bochsrc.txt
 debug:
-	@echo $(OBJS_BIN)
-	@echo $(I_flags)
-
+	objcopy --only-keep-debug out/kernel/kernel.bin kernel.sym
+	~/Downloads/bochs-gdb/bochs -f gdbbochs.txt
 
 clean:
 	rm -rf *.img  *.out *.lock *.bin out *.sym
