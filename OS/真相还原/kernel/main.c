@@ -11,6 +11,8 @@
 // uint64_t mem_size = 0x100000000;
 
 
+// -8968605370094895462
+
 int main(void) {
         // 初始化
         init_all();
