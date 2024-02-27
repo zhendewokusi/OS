@@ -1,7 +1,6 @@
 #ifndef __THREAD_H__
 #define __THREAD_H__
 
-#include <cstdint>
 #include "stdint.h"
 
 typedef void thread_func(void*) ;
@@ -57,12 +56,14 @@ struct thread_stack {
 };
 
 // 进程或者线程的PCB
-struct tast_struct {
+struct task_struct {
         uint32_t * self_kstack;
         enum task_status status;
         uint8_t priority;
         char name[16];
         uint32_t stack_magic;
 };
-
+void thread_create(struct task_struct * pthread, thread_func function, void* func_arg);
+void init_thread(struct task_struct * pthread,char * name,uint8_t priority);
+struct task_struct* thread_start(char* name,uint8_t priority,thread_func function,void* func_arg);
 #endif
