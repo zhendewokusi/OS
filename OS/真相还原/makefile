@@ -38,6 +38,9 @@ out/kernel/traps.o:kernel/traps.c
 out/kernel/memory.o:kernel/memory.c
 	cc -m32 -I include -I include/asm -I include/kernel -c -fno-builtin -o out/kernel/memory.o kernel/memory.c -fno-stack-protector -g -O0
 
+out/kernel/thread.o:kernel/thread.c
+	cc -m32 -I include -I include/asm -I include/kernel -c -fno-builtin -o out/kernel/thread.o kernel/thread.c -fno-stack-protector -g -O0
+
 out/lib/string.o:lib/string.c
 	mkdir -p $(dir $@)
 	cc -m32 -I include -I include/asm -I include/kernel -c -fno-builtin -o out/lib/string.o lib/string.c -fno-stack-protector -g -O0
@@ -59,19 +62,18 @@ out/kernel/main.o:kernel/main.c
 	mkdir -p $(dir $@)
 	cc -m32 -I include -I include/asm -I include/kernel -c -fno-builtin -o out/kernel/main.o kernel/main.c -fno-stack-protector -g -O0 
 
-out/kernel/kernel.bin:out/kernel/main.o out/kernel/print.o out/kernel/kernel.o out/init.o out/interrupt.o out/timer.o out/kernel/traps.o out/lib/string.o out/lib/kernel/bitmap.o out/kernel/memory.o
+out/kernel/kernel.bin:out/kernel/main.o out/kernel/print.o out/kernel/kernel.o out/init.o out/interrupt.o out/timer.o out/kernel/traps.o out/lib/string.o out/lib/kernel/bitmap.o out/kernel/memory.o out/kernel/thread.o
 	ld -melf_i386  -T kernel.ld -o ./out/kernel/kernel.bin \
-    out/kernel/main.o out/kernel/print.o out/kernel/kernel.o out/init.o out/interrupt.o out/timer.o out/kernel/traps.o out/lib/string.o out/lib/kernel/bitmap.o out/kernel/memory.o
+    out/kernel/main.o out/kernel/print.o out/kernel/kernel.o out/init.o out/interrupt.o out/timer.o out/kernel/traps.o out/lib/string.o out/lib/kernel/bitmap.o out/kernel/memory.o out/kernel/thread.o
 
 build:$(OBJS_BIN) out/kernel/kernel.bin
-
+	make image
 #定义了一个名为run的目标，依赖于OBJS_BIN，表示要运行程序。
 run: ${OBJS_BIN}
-	make image
-	bochs -f bochsrc.txt
+	bochs -f bochsrc.txt -q
 debug:
 	objcopy --only-keep-debug out/kernel/kernel.bin kernel.sym
-	~/Downloads/bochs-gdb/bochs -f gdbbochs.txt
+	~/Downloads/bochs-gdb/bochs -f gdbbochs.txt -q
 
 clean:
 	rm -rf *.img  *.out *.lock *.bin out *.sym

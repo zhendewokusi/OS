@@ -17,6 +17,8 @@ void k_thread_a(void* arg);
 int main(void) {
         // 初始化
         init_all();
+
+
         void* addr = get_kernel_pge(3);
         put_str("\n     get_kernel_page start vaddr is ");
         put_int((uint32_t)addr);
@@ -24,7 +26,9 @@ int main(void) {
         put_str("\n     get_kernel_page start vaddr2 is ");
         put_int((uint32_t)addr2);
         put_str("\n");
-        // struct task_struct* tmp = thread_start("k_thread_a", 31, k_thread_a, "K-thread-a-argA ");
+
+        struct task_struct* tmp = thread_start("k_thread_a", 1, k_thread_a, "argA ");
+
         while(1);
 }
 
@@ -32,9 +36,9 @@ int main(void) {
 /* 在线程中运行的函数 */
 void k_thread_a(void* arg)
 {
-    /* 用void*来通用表示参数,被调用的函数知道自己需要什么类型的参数,自己转换再用 */
-    char* para = arg;
-    while(1) {
-        put_str(para);
-    }
+        /* 用void*来通用表示参数,被调用的函数知道自己需要什么类型的参数,自己转换再用 */
+        char* para = arg;
+        while(1) {
+                put_str(para);
+        }
 }

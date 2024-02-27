@@ -30,6 +30,7 @@ void init_thread(struct task_struct * pthread,char * name,uint8_t priority)
 {
         memset(pthread,0,sizeof(*pthread));
         strcpy(pthread->name,name);
+        pthread->self_kstack = (uint32_t *)((uint32_t)pthread + PAGE_SIZE);
         pthread->status = TASK_READY;
         pthread->priority = priority;
         pthread->stack_magic = 0x12345678;      // 魔数
