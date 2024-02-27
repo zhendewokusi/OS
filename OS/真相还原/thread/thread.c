@@ -5,6 +5,7 @@
 #include "string.h"
 
 #define PAGE_SIZE 4096
+#define TASK_PAGE_SIZE 1
 
 static void kernel_thread(thread_func* func, void* func_arg)
 {
@@ -29,4 +30,14 @@ void init_thread(struct tast_struct * pthread,char * name,uint8_t priority)
         pthread->status = TASK_READY;
         pthread->priority = priority;
         pthread->stack_magic = 0x12345678;      // 魔数
+}
+
+struct task_struct start_thread(char* name,uint8_t priority,thread_func function,void* func_arg)
+{
+        struct task_struct* thread = get_kernel_page(TASK_PAGE_SIZE);
+        init_thread(thread, name, priority);
+        thread_create(thread, function, func_arg);
+
+        // 内联汇编
+        return thread;
 }
