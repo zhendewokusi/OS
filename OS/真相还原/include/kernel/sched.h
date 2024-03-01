@@ -4,6 +4,10 @@
 #include "stdint.h"
 #include "linux/rbtree.h"
 
+# define schedstat_inc(rq, field)	do { (rq)->field++; } while (0)
+# define schedstat_add(rq, field, amt)	do { (rq)->field += (amt); } while (0)
+# define schedstat_set(var, val)	do { var = (val); } while (0)
+
 struct load_weight {
 	unsigned long weight, inv_weight;
 };
