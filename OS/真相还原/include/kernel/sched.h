@@ -1,7 +1,6 @@
 #ifndef __SCHED_H__
 #define __SCHED_H__
 
-#include <cstdint>
 #include "stdint.h"
 #include "linux/rbtree.h"
 
@@ -38,11 +37,24 @@ struct cfs_rq {
 };
 
 struct rq {
-	// runqueue 锁
+	// runqueue lock
+	// ...
+	struct load_weight load;
+
+	// 一个记录实际的物理时间
+	//一个记录task运行的时间，这里如果发生中断等时间需要停止加
 	uint64_t clock;
+	
+	struct cfs_rq cfs;
 };
 
 // 实现时间记账功能
 static void update_curr(struct cfs_rq *cfs_rq);
 
 #endif
+
+/*
+
+根据当前系统的情况计算targeted latency（调度周期），在这个调度周期中计算当前进程应该获得的时间片（物理时间），然后计算当前进程已经累积执行的物理时间，如果大于当前应该获得的时间片，那么更新本进程的vruntime并标记need resched flag，并在最近的一个调度点发起调度。
+
+ */

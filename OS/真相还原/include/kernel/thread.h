@@ -2,6 +2,7 @@
 #define __THREAD_H__
 
 #include "stdint.h"
+#include "sched.h"
 
 typedef void thread_func(void*) ;
 
@@ -12,6 +13,19 @@ enum task_status {
         TASK_WAITING,
 
 };
+
+// 进程或者线程的PCB
+struct task_struct {
+        uint32_t * self_kstack;
+        enum task_status status;
+        uint8_t priority;
+        char name[16];
+        struct sched_entity se; // 调度实体
+        struct task_struct * parent; // 父进程
+        
+        uint32_t stack_magic;
+};
+
 
 // 中断发生时候保护上下文环境
 // 该结构在线程自己的内核栈中的位置是固定的，所以在页的顶端
@@ -55,14 +69,7 @@ struct thread_stack {
         void* func_arg;
 };
 
-// 进程或者线程的PCB
-struct task_struct {
-        uint32_t * self_kstack;
-        enum task_status status;
-        uint8_t priority;
-        char name[16];
-        uint32_t stack_magic;
-};
+
 void thread_create(struct task_struct * pthread, thread_func function, void* func_arg);
 void init_thread(struct task_struct * pthread,char * name,uint8_t priority);
 struct task_struct* thread_start(char* name,uint8_t priority,thread_func function,void* func_arg);
