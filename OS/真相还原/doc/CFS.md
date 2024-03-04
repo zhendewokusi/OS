@@ -17,3 +17,21 @@ unsigned long long __attribute__((weak)) sched_clock(void)
 	return (unsigned long long)jiffies * (NSEC_PER_SEC / HZ);
 }
 ```
+
+2. 何时进行调度？？
+
+不能依靠用户显性调用`schedule()`，用户不调用不久一直执行它了....
+内核提供了一个`need_resched`标志（在thread_info结构体中）。
+
+那么何时进行标志？当进程应该被抢占时，`schedule_tick()`设置；当优先级高的进程进入可执行状态时，`try_to_wake_up()`设置标志。内核检查标志，如果确认其被设置，调用`schedule()`。
+
+何时检查？内核在中断处理程序返回*用户空间*或者系统调用返回*用户空间*都会进行检查`need_resched`标志
+
+3. 内核抢占？
+
+Linux支持完整的内核抢占。什么时候调度是安全的？没有持有锁的时候。为了支持内核抢占，`thread_info`中加入了`preempt_count`使用锁+1,释放锁-1。
+
+发生时刻：
+
+中断发生时候，且没有返回内核，任务阻塞，显式调用`schedule()`，内核代码具有可抢占性。
+
