@@ -85,8 +85,8 @@ struct thread_info {
 	// __u8			supervisor_stack[0];
 };
 
-
 void thread_create(struct task_struct * pthread, thread_func function, void* func_arg);
 void init_thread(struct task_struct * pthread,char * name,uint8_t priority);
 struct task_struct* thread_start(char* name,uint8_t priority,thread_func function,void* func_arg);
 #endif
+

@@ -17,6 +17,7 @@ enum pool_flags {
 #define	 PG_US_U  4	// U/S 属性位值, 用户级
 
 typedef unsigned long mm_segment_t;
+#define barrier() __asm__ __volatile__("": : :"memory")
 
 // 用于虚拟地址管理
 struct virtual_addr {

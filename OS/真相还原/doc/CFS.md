@@ -110,3 +110,9 @@ static inline struct thread_info *current_thread_info(void)
 在x86架构上，`pcb`（进程控制块）和 `task_struct` 是同一个概念，它们指代的是相同的数据结构。在Linux内核中，特别是在x86架构上，`task_struct` 结构体用于存储进程的所有信息，包括进程状态、调度信息、文件描述符等等。因此，`task_struct` 结构体即是进程的控制块，也是进程的描述符。
 
 简而言之，在x86架构上，`pcb` 和 `task_struct` 并不是分开的，它们代表了相同的概念，即进程的控制块或进程描述符。
+
+任务:`schedule_debug(struct task_struct *prev)`
+函数作用：
+ 1. 检查是否处于原子上下文
+ 2. 记录调度次数
+ 3. 调度性能分析
