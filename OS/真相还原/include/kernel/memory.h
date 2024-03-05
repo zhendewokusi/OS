@@ -16,6 +16,8 @@ enum pool_flags {
 #define	 PG_US_S  0	// U/S 属性位值, 系统级
 #define	 PG_US_U  4	// U/S 属性位值, 用户级
 
+typedef unsigned long mm_segment_t;
+
 // 用于虚拟地址管理
 struct virtual_addr {
    struct bitmap vaddr_bitmap;

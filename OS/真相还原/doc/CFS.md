@@ -50,7 +50,7 @@ do { \
   - 虚拟内存从上一个进程更换到新进程
   - 调用`switch_to()`，该函数负责上一个进程的处理器状态切换到新进程的处理器状态
 
-4. current?
+4. current?current_thread_info?
 ```c
 #define percpu_from_op(op,var)					\
 	({							\
@@ -85,3 +85,28 @@ static __always_inline struct task_struct *get_current(void)
 #define current get_current()
 ```
 
+在典型的 Linux 内核实现中，thread_info 结构体通常位于当前线程栈帧所在页内存的最低地址。然而目前是把 task_struct 放在最低下，emmmm，得改
+
+```c
+/* how to get the thread information struct from C */
+static inline struct thread_info *current_thread_info(void)
+{
+	return (struct thread_info *)(current_stack_pointer & ~(THREAD_SIZE - 1));
+}
+```
+
+很有意思一个点：为什么asm-alpha架构中pcb 和 task_struct 是分开的?
+
+在 Alpha 架构中，`pcb`（进程控制块）和 `task_struct` 是分开的，这是因为 Alpha 架构上的 Linux 内核采用了不同的内存布局和进程管理设计。
+
+1. **Alpha 架构上的内存布局**：
+   在 Alpha 架构上，进程控制块（PCB）通常被称为进程描述符（process descriptor），存储在进程管理单元（Process Management Unit，PMU）中。PMU 是 Alpha 架构中专门用于管理进程信息的硬件单元。这意味着 PCB 存储在专门的硬件结构中，而不是像其他架构上的 Linux 内核一样存储在内核堆中。
+
+2. **task_struct 的设计**：
+   在 Alpha 架构上，`task_struct` 结构体仍然存在，但它主要用于 Linux 内核的内部管理和调度，而不是存储进程的全部信息。在 Alpha 架构上，`task_struct` 可能会更轻量化，只包含必要的调度和管理信息。因此，Alpha 架构上的 `task_struct` 不是进程控制块（PCB）的完整替代，而是 PCB 的一部分。
+
+综上所述，Alpha 架构上的 PCB 和 `task_struct` 是分开的，因为它们分别在硬件级别和内核级别进行了不同的设计和实现，以适应 Alpha 架构的特定特性和需求。
+
+在x86架构上，`pcb`（进程控制块）和 `task_struct` 是同一个概念，它们指代的是相同的数据结构。在Linux内核中，特别是在x86架构上，`task_struct` 结构体用于存储进程的所有信息，包括进程状态、调度信息、文件描述符等等。因此，`task_struct` 结构体即是进程的控制块，也是进程的描述符。
+
+简而言之，在x86架构上，`pcb` 和 `task_struct` 并不是分开的，它们代表了相同的概念，即进程的控制块或进程描述符。

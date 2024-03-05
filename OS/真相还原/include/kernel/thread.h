@@ -69,6 +69,22 @@ struct thread_stack {
         void* func_arg;
 };
 
+struct thread_info {
+	struct task_struct	*task;		/* main task structure */
+	unsigned long		flags;		/* low level flags */
+	unsigned long		status;		/* thread-synchronous flags */
+	int			preempt_count;	/* 0 => preemptable, <0 => BUG */
+	mm_segment_t		addr_limit;	/* thread address space:
+					 	   0-0xCFFFFFFF for user-thead
+						   0-0xFFFFFFFF for kernel-thread
+						*/
+	// void			*sysenter_return;
+	// struct restart_block    restart_block;
+
+	// unsigned long           previous_esp;   /* ESP of the previous stack in case of nested (IRQ) stacks */
+	// __u8			supervisor_stack[0];
+};
+
 
 void thread_create(struct task_struct * pthread, thread_func function, void* func_arg);
 void init_thread(struct task_struct * pthread,char * name,uint8_t priority);
