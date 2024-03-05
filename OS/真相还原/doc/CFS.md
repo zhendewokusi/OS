@@ -43,4 +43,45 @@ do { \
 
 中断发生时候，且没有返回内核，任务阻塞，显式调用`schedule()`，内核代码具有可抢占性。
 
-任务： `context_switch()`
+3. 上下文切换如何做？
+
+`context_switch()`负责，`schedule()`调用此函数。
+功能：
+  - 虚拟内存从上一个进程更换到新进程
+  - 调用`switch_to()`，该函数负责上一个进程的处理器状态切换到新进程的处理器状态
+
+4. current?
+```c
+#define percpu_from_op(op,var)					\
+	({							\
+		typeof(var) ret__;				\
+		switch (sizeof(var)) {				\
+		case 1:						\
+			asm(op "b "__percpu_seg"%1,%0"		\
+			    : "=r" (ret__)			\
+			    : "m" (var));			\
+			break;					\
+		case 2:						\
+			asm(op "w "__percpu_seg"%1,%0"		\
+			    : "=r" (ret__)			\
+			    : "m" (var));			\
+			break;					\
+		case 4:						\
+			asm(op "l "__percpu_seg"%1,%0"		\
+			    : "=r" (ret__)			\
+			    : "m" (var));			\
+			break;					\
+		default: __bad_percpu_size();			\
+		}						\
+		ret__; })
+
+#define x86_read_percpu(var) percpu_from_op("mov", per_cpu__##var)
+
+
+static __always_inline struct task_struct *get_current(void)
+{
+	return x86_read_percpu(current_task);
+}
+#define current get_current()
+```
+

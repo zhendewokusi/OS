@@ -20,8 +20,8 @@ struct task_struct {
         enum task_status status;
         uint8_t priority;
         char name[16];
-        struct sched_entity se; // 调度实体
-        struct task_struct * parent; // 父进程
+        // struct sched_entity se; // 调度实体
+        // struct task_struct * parent; // 父进程
         
         uint32_t stack_magic;
 };

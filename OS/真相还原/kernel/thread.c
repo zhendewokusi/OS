@@ -15,6 +15,7 @@ static void kernel_thread(thread_func* func, void* func_arg)
         func(func_arg);
 }
 
+// 线程 thread_stack 信息
 void thread_create(struct task_struct * pthread, thread_func function, void* func_arg)
 {
         pthread->self_kstack -= sizeof(struct intr_stack);
@@ -26,6 +27,7 @@ void thread_create(struct task_struct * pthread, thread_func function, void* fun
         kthread_stack->ebp = kthread_stack->ebx = kthread_stack->edi = kthread_stack->esi = 0;
 }
 
+// 线程 task_struct结构 初始化
 void init_thread(struct task_struct * pthread,char * name,uint8_t priority)
 {
         memset(pthread,0,sizeof(*pthread));
@@ -36,6 +38,7 @@ void init_thread(struct task_struct * pthread,char * name,uint8_t priority)
         pthread->stack_magic = 0x12345678;      // 魔数
 }
 
+// 创建并且进入该线程
 struct task_struct* thread_start(char* name,uint8_t priority,thread_func function,void* func_arg)
 {
         struct task_struct* thread = get_kernel_pge(TASK_PAGE_SIZE);

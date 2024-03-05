@@ -26,7 +26,7 @@ int main(void) {
         put_str("\n     get_kernel_page start vaddr2 is ");
         put_int((uint32_t)addr2);
         put_str("\n");
-
+        __MAGIC_BREAK();
         struct task_struct* tmp = thread_start("k_thread_a", 1, k_thread_a, "argA ");
 
         while(1);

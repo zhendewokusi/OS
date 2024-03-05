@@ -2,7 +2,7 @@
 #define	_LINUX_RBTREE_H
 
 #include "stdint.h"
-
+#define NULL 0
 // 红黑树是一种自平衡的二叉查找树
 /*
 1. 节点是红色或黑色。
