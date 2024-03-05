@@ -19,6 +19,7 @@ unsigned long long __attribute__((weak)) sched_clock(void)
 ```
 
 2. 何时进行调度？？
+schedule(): line 3896
 
 不能依靠用户显性调用`schedule()`，用户不调用不久一直执行它了....
 内核提供了一个`need_resched`标志（在thread_info结构体中）。
@@ -30,8 +31,16 @@ unsigned long long __attribute__((weak)) sched_clock(void)
 3. 内核抢占？
 
 Linux支持完整的内核抢占。什么时候调度是安全的？没有持有锁的时候。为了支持内核抢占，`thread_info`中加入了`preempt_count`使用锁+1,释放锁-1。
+```c
+#define preempt_disable() \
+do { \
+	inc_preempt_count(); \
+	barrier(); \
+} while (0)
+```
 
 发生时刻：
 
 中断发生时候，且没有返回内核，任务阻塞，显式调用`schedule()`，内核代码具有可抢占性。
 
+任务： `context_switch()`
