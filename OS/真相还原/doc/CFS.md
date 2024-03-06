@@ -116,3 +116,5 @@ static inline struct thread_info *current_thread_info(void)
  1. 检查是否处于原子上下文
  2. 记录调度次数
  3. 调度性能分析
+
+include/linux/irqflags.h 
