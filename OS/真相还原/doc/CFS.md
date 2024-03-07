@@ -121,6 +121,14 @@ include/linux/irqflags.h
 
 
 
+static irqreturn_t timer_interrupt(int irq, void *dev_id)
+{
+	struct clock_event_device *evt = &clockevent_davinci;
+
+	evt->event_handler(evt);
+	return IRQ_HANDLED;
+}
+
 ----------------
 
 测试task_struct的thread_group是否工作正常。
