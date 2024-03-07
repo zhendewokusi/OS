@@ -27,13 +27,18 @@ void thread_create(struct task_struct * pthread, thread_func function, void* fun
         kthread_stack->ebp = kthread_stack->ebx = kthread_stack->edi = kthread_stack->esi = 0;
 }
 
-// 线程 task_struct结构 初始化
+// 进程 task_struct结构(PCB) 初始化
 void init_thread(struct task_struct * pthread,char * name,uint8_t priority)
 {
         memset(pthread,0,sizeof(*pthread));
         strcpy(pthread->name,name);
         pthread->self_kstack = (uint32_t *)((uint32_t)pthread + PAGE_SIZE);
-        pthread->status = TASK_READY;
+        // 这里主线程已经在运行了
+        if ((uint32_t)(pthread) == 0xc009e000) {
+                pthread->status = TASK_RUNNING;
+        }else {
+                pthread->status =TASK_READY;
+        }
         pthread->priority = priority;
         pthread->stack_magic = 0x12345678;      // 魔数
 }
@@ -41,11 +46,28 @@ void init_thread(struct task_struct * pthread,char * name,uint8_t priority)
 // 创建并且进入该线程
 struct task_struct* thread_start(char* name,uint8_t priority,thread_func function,void* func_arg)
 {
-        struct task_struct* thread = get_kernel_pge(TASK_PAGE_SIZE);
+        struct  task_struct* thread = get_kernel_pge(TASK_PAGE_SIZE);
         init_thread(thread, name, priority);
         thread_create(thread, function, func_arg);
         __asm__ __volatile__ ("movl %0, %%esp; \
         pop %%ebp;pop %%ebx;pop %%edi;pop %%esi; \
         ret": :"g" (thread->self_kstack) : "memory");
         return thread;
+}
+
+// 获取当前运行线程的PCB
+struct task_struct* get_runningthread_pcb()
+{
+        uint32_t esp = 0;
+        __asm__ __volatile__ ("mov %%esp,%0" : "=g" (esp));
+        return (struct task_struct*)(esp & 0xfffff000);
+}
+// 之前预留0x09e000000 开始作为内核的 PCB
+void kernel_main_thread_init()
+{
+        // 这里得到的是 0xc009e000
+        struct task_struct * main_pcb = get_runningthread_pcb();
+        init_thread(main_pcb,"main",31);
+        // while (1) {
+        // }
 }

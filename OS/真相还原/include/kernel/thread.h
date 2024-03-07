@@ -3,7 +3,8 @@
 
 #include "stdint.h"
 #include "sched.h"
-
+#include "memory.h"
+// #include "list.h"
 typedef void thread_func(void*) ;
 
 enum task_status {
@@ -14,15 +15,16 @@ enum task_status {
 
 };
 
-// 进程或者线程的PCB
+// 进程控制块
 struct task_struct {
         uint32_t * self_kstack;
         enum task_status status;
         uint8_t priority;
         char name[16];
-        // struct sched_entity se; // 调度实体
-        // struct task_struct * parent; // 父进程
-        
+        struct sched_entity se; // 调度实体
+        struct task_struct * parent; // 父进程
+
+        // struct list_head thread_group;  // 当前进程的开的所有线程
         uint32_t stack_magic;
 };
 

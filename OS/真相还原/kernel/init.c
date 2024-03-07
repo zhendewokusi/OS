@@ -8,5 +8,6 @@ void init_all() {
         idt_init();
         timer_init();
         memo_init();
+        kernel_main_thread_init();
         return;
 }
