@@ -118,3 +118,20 @@ static inline struct thread_info *current_thread_info(void)
  3. 调度性能分析
 
 include/linux/irqflags.h 
+
+
+
+----------------
+
+测试task_struct的thread_group是否工作正常。
+```shell
+(gdb) p thread_info->task->thread_group->next
+$6 = (struct list_head *) 0xc009d064
+(gdb) p thread_info->task->thread_group->next->next
+$7 = (struct list_head *) 0xc0106064
+(gdb) p thread_info->task->thread_group->next->next->next
+$8 = (struct list_head *) 0xc0108064
+(gdb) p thread_info->task->thread_group->next->next->next->next
+$9 = (struct list_head *) 0xc009d064
+(gdb)
+```

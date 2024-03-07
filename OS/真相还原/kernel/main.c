@@ -28,6 +28,7 @@ int main(void) {
         put_str("\n");
         __MAGIC_BREAK();
         struct task_struct* tmp = thread_start("k_thread_a", 1, k_thread_a, "argA ");
+        struct task_struct* tmp2 = thread_start("k_thread_b", 2, k_thread_a, "argB ");
 
         while(1);
 }
