@@ -4,30 +4,15 @@
 #include "stdint.h"
 #include "sched.h"
 #include "memory.h"
-// #include "list.h"
+#include "list.h"
 typedef void thread_func(void*) ;
 
 enum task_status {
-        TASK_RUNNING,   // 任务运行中
-        TASK_READY,     // 任务就绪
-        TASK_DIED,      // 任务死亡
-        TASK_WAITING,
-
+	TASK_RUNNING,   // 任务运行中
+	TASK_READY,     // 任务就绪
+	TASK_DIED,      // 任务死亡
+	TASK_WAITING,
 };
-
-// 进程控制块
-struct task_struct {
-        uint32_t * self_kstack;
-        enum task_status status;
-        uint8_t priority;
-        char name[16];
-        struct sched_entity se; // 调度实体
-        struct task_struct * parent; // 父进程
-
-        // struct list_head thread_group;  // 当前进程的开的所有线程
-        uint32_t stack_magic;
-};
-
 
 // 中断发生时候保护上下文环境
 // 该结构在线程自己的内核栈中的位置是固定的，所以在页的顶端
@@ -55,6 +40,7 @@ struct intr_stack {
         uint32_t ss;
 };
 
+// 正常调度时保存的上下文环境
 struct thread_stack {
 //      ABI 标准
         uint32_t ebp;
@@ -71,10 +57,23 @@ struct thread_stack {
         void* func_arg;
 };
 
+// 进程控制块
+struct task_struct {
+	uint8_t priority;
+	char name[16];
+	struct sched_entity se; // 调度实体
+	struct task_struct * parent; // 父进程
+	struct task_struct *group_leader;	/* threadgroup leader */
+
+	struct list_head thread_group;  // 当前进程的开的所有线程
+};
+
+// 线程信息
 struct thread_info {
-	struct task_struct	*task;		/* main task structure */
+	uint32_t * self_kstack;
+	enum task_status status;
+	struct task_struct	*task;
 	unsigned long		flags;		/* low level flags */
-	unsigned long		status;		/* thread-synchronous flags */
 	int			preempt_count;	/* 0 => preemptable, <0 => BUG */
 	mm_segment_t		addr_limit;	/* thread address space:
 					 	   0-0xCFFFFFFF for user-thead
@@ -85,10 +84,11 @@ struct thread_info {
 
 	// unsigned long           previous_esp;   /* ESP of the previous stack in case of nested (IRQ) stacks */
 	// __u8			supervisor_stack[0];
+        uint32_t stack_magic;
 };
 
-void thread_create(struct task_struct * pthread, thread_func function, void* func_arg);
-void init_thread(struct task_struct * pthread,char * name,uint8_t priority);
-struct task_struct* thread_start(char* name,uint8_t priority,thread_func function,void* func_arg);
+void thread_create(struct thread_info * pthread, thread_func function, void* func_arg);
+void init_thread(struct thread_info * pthread,char * name,uint8_t priority);
+struct thread_info* thread_start(char* name,uint8_t priority,thread_func function,void* func_arg);
 #endif
 
