@@ -1,8 +1,10 @@
 #include "timer.h"
 #include "io.h"
 #include "print.h"
+#include "interrupt.h"
+#include "stdint.h"
 
-#define IRQ0_FREQUENCY	   1
+#define IRQ0_FREQUENCY	   100
 #define INPUT_FREQUENCY	   1193180
 // #define COUNTER0_VALUE	   INPUT_FREQUENCY / IRQ0_FREQUENCY
 #define COUNTER0_VALUE	   5
@@ -26,11 +28,23 @@ static void frequency_set(uint8_t counter_port, \
         outb(counter_port, (uint8_t)counter_value >> 8);
 }
 
+
+static void intr_timer_handler(void)
+{
+	jiffies_64++;
+	put_str("------------------------\n");
+	put_int(jiffies_64);
+	put_char('\n');
+	put_str("------------------------\n");
+}
 // 初始化PIT8253
 void timer_init() {
-        put_str("timer_init start\n");
-        // 设置8253的定时周期
-        frequency_set( CONTRER0_PORT, COUNTER0_NO, 
-                       READ_WRITE_LATCH, COUNTER_MODE, COUNTER0_VALUE);
-        put_str("timer_init done\n");
+	put_str("timer_init start\n");
+	// 设置8253的定时周期
+	frequency_set( CONTRER0_PORT, COUNTER0_NO, 
+		READ_WRITE_LATCH, COUNTER_MODE, COUNTER0_VALUE);
+
+	register_handler(0x20,intr_timer_handler);
+	put_str("timer_init done\n");
+
 }

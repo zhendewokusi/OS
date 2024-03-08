@@ -15,22 +15,23 @@
 void k_thread_a(void* arg);
 
 int main(void) {
-        // 初始化
-        init_all();
+	// 初始化
+	init_all();
 
 
-        void* addr = get_kernel_pge(3);
-        put_str("\n     get_kernel_page start vaddr is ");
-        put_int((uint32_t)addr);
-        void* addr2 = get_kernel_pge(2);
-        put_str("\n     get_kernel_page start vaddr2 is ");
-        put_int((uint32_t)addr2);
-        put_str("\n");
-        __MAGIC_BREAK();
-        struct task_struct* tmp = thread_start("k_thread_a", 1, k_thread_a, "argA ");
-        struct task_struct* tmp2 = thread_start("k_thread_b", 2, k_thread_a, "argB ");
+	void* addr = get_kernel_pge(3);
+	put_str("\n     get_kernel_page start vaddr is ");
+	put_int((uint32_t)addr);
+	void* addr2 = get_kernel_pge(2);
+	put_str("\n     get_kernel_page start vaddr2 is ");
+	put_int((uint32_t)addr2);
+	put_str("\n");
+	__MAGIC_BREAK();
+	struct task_struct* tmp = thread_start("k_thread_a", 1, k_thread_a, "argA ");
+	struct task_struct* tmp2 = thread_start("k_thread_b", 2, k_thread_a, "argB ");
 
-        while(1);
+	__STI();
+	while(1);
 }
 
 

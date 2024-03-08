@@ -128,7 +128,7 @@ enum intr_status get_intr_status(void) {
 }
 
 // 设置intr状态,并且返回设置后的状态（防止设置失败，多一道检查）
-enum intr_status set_intr_status(enum intr_status status) {
+enum intr_status set_intr_status(enum intr_status status){
         if(status == intr_on) {
         // 开启中断
         __asm__ __volatile__("sti");
@@ -137,4 +137,9 @@ enum intr_status set_intr_status(enum intr_status status) {
         __asm__ __volatile__("cli");
         }
         return get_intr_status();
+}
+
+void register_handler(uint8_t vector,intr_handler function)
+{
+	idt_table[vector] = function;
 }
