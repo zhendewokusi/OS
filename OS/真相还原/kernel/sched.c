@@ -1,6 +1,9 @@
 #include "sched.h"
 #include "linux/kernel.h"
 #include "stdint.h"
+#include "thread.h"
+#include "timer.h"
+
 
 
 static inline struct rq *rq_of(struct cfs_rq *cfs_rq)
@@ -42,4 +45,27 @@ static void update_curr(struct cfs_rq *cfs_rq)
         // 判断是当前进程是否是任务，如果是则将设置一个指向task_struct的指针curtask
         
         // 更新当前进程 curtask 的 CPU 使用情况统计信息（用于调度算法)
+}
+
+// 主要调度器函数
+asmlinkage void __shced schedule()
+{
+	struct task_struct * prev,* next;
+	unsigned long *switch_count;
+
+need_resched:
+	inc_preempt_count();		// 禁止抢占
+	// 由于该OS是单处理器，就在sched.h直接定义了全局的 rq 和 cfs_rq
+	prev = rq->curr;
+	switch_count = &prev->nivcsw;
+	
+	// 释放先前进程的锁
+need_resched_nonpreemptible:
+	
+	return;
+}
+
+asmlinkage void __shced schedule_init()
+{
+
 }

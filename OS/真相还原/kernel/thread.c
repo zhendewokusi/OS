@@ -5,8 +5,7 @@
 #include "string.h"
 #include "kernel.h"
 
-#define PAGE_SIZE 4096
-#define TASK_PAGE_SIZE 1
+
 
 typedef void thread_func(void*) ;
 
@@ -41,7 +40,7 @@ uint8_t have_init = 0;
 void init_thread(struct thread_info * thread_info,char * name,uint8_t priority)
 {
 	memset(thread_info,0,sizeof(struct thread_info));
-	thread_info->self_kstack = (uint32_t *)((uint32_t)thread_info + PAGE_SIZE);
+	thread_info->self_kstack = (uint32_t *)((uint32_t)thread_info + THREAD_SIZE);
 
 	if(unlikely((strcmp(name, "init") == 0) && !have_init)) {
 		thread_info->status = TASK_RUNNING;

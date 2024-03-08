@@ -1,12 +1,28 @@
 #ifndef __SCHED_H__
 #define __SCHED_H__
 
+#include <cstddef>
+#include "memory.h"
 #include "stdint.h"
 #include "linux/rbtree.h"
+#include "thread.h"
+
+// 单独将调度器核心代码放置在一个段中，提高缓存命中,便于代码优化
+#define __shced __attribute__((__section__(".shced.text")));
 
 # define schedstat_inc(rq, field)	do { (rq)->field++; } while (0)
 # define schedstat_add(rq, field, amt)	do { (rq)->field += (amt); } while (0)
 # define schedstat_set(var, val)	do { var = (val); } while (0)
+
+#define curr_preempt_count() current_thread_info()->preempt_count
+
+#define add_preempt_count(val) curr_preempt_count() += (val)
+#define inc_preempt_count() add_preempt_count(1)
+
+#define sub_preempt_count(val) curr_preempt_count() -= (val)
+#define del_preempt_count() sub_preempt_count(1)
+
+
 
 struct load_weight {
 	unsigned long weight, inv_weight;
@@ -48,12 +64,25 @@ struct rq {
 	// 一个记录实际的物理时间
 	//一个记录task运行的时间，这里如果发生中断等时间需要停止加
 	uint64_t clock;
-	
+	struct task_struct *curr, *idle;	// 后者是空闲进程，当没有任务时候调用该进程（节能）
 	struct cfs_rq cfs;
 };
 
 // 实现时间记账功能
 static void update_curr(struct cfs_rq *cfs_rq);
+
+static struct rq rq;
+static struct cfs_rq cfs_rq;
+
+#define INIT_STRUCT_CFSRQ(cfs_addr) do{	\
+
+}while(0);
+
+#define INIT_STRUCT_RQ(rq_addr) do{	\
+	rq_addr->load_weight = NULL;	\
+	rq_addr->clock = 0;		\
+	INIT_STRUCT_CFSRQ(cfs_addr)	\
+} while(0);
 
 #endif
 

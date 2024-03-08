@@ -20,7 +20,90 @@ unsigned long long __attribute__((weak)) sched_clock(void)
 
 2. 何时进行调度？？
 schedule(): line 3896
+```c
+/*
+ * schedule() is the main scheduler function.
+ */
+asmlinkage void __sched schedule(void)
+{
+	struct task_struct *prev, *next;
+	unsigned long *switch_count;
+	struct rq *rq;
+	int cpu;
 
+need_resched:
+	preempt_disable();
+	cpu = smp_processor_id();
+	rq = cpu_rq(cpu);
+	rcu_qsctr_inc(cpu);
+	prev = rq->curr;
+	switch_count = &prev->nivcsw;
+
+	release_kernel_lock(prev);
+need_resched_nonpreemptible:
+
+	schedule_debug(prev);
+
+	hrtick_clear(rq);
+
+	/*
+	 * Do the rq-clock update outside the rq lock:
+	 */
+	local_irq_disable();
+	__update_rq_clock(rq);
+	spin_lock(&rq->lock);
+	clear_tsk_need_resched(prev);
+
+	if (prev->state && !(preempt_count() & PREEMPT_ACTIVE)) {
+		if (unlikely((prev->state & TASK_INTERRUPTIBLE) &&
+				signal_pending(prev))) {
+			prev->state = TASK_RUNNING;
+		} else {
+			deactivate_task(rq, prev, 1);
+		}
+		switch_count = &prev->nvcsw;
+	}
+
+#ifdef CONFIG_SMP
+	if (prev->sched_class->pre_schedule)
+		prev->sched_class->pre_schedule(rq, prev);
+#endif
+
+	if (unlikely(!rq->nr_running))
+		idle_balance(cpu, rq);
+
+	prev->sched_class->put_prev_task(rq, prev);
+	next = pick_next_task(rq, prev);
+
+	sched_info_switch(prev, next);
+
+	if (likely(prev != next)) {
+		rq->nr_switches++;
+		rq->curr = next;
+		++*switch_count;
+
+		context_switch(rq, prev, next); /* unlocks the rq */
+		/*
+		 * the context switch might have flipped the stack from under
+		 * us, hence refresh the local variables.
+		 */
+		cpu = smp_processor_id();
+		rq = cpu_rq(cpu);
+	} else
+		spin_unlock_irq(&rq->lock);
+
+	hrtick_set(rq);
+
+	if (unlikely(reacquire_kernel_lock(current) < 0))
+		goto need_resched_nonpreemptible;
+
+	preempt_enable_no_resched();
+	if (unlikely(test_thread_flag(TIF_NEED_RESCHED)))
+		goto need_resched;
+}
+EXPORT_SYMBOL(schedule);
+
+```
 不能依靠用户显性调用`schedule()`，用户不调用不久一直执行它了....
 内核提供了一个`need_resched`标志（在thread_info结构体中）。
 
@@ -223,3 +306,25 @@ jiffies转换为秒可采用公式：(jiffies/HZ)计算，
 将秒转换为jiffies可采用公式：(seconds*HZ)计算。
 
 当 时钟中断发生时，jiffies 值就加1。因此连续累加一年又四个多月后就会溢出(假定HZ=100，1个jiffies等于1/100秒，jiffies可记录的最大秒数为 (2^32 -1)/100=42949672.95秒，约合497天或1.38年)，即当取值到达最大值时继续加1，就变为了0。
+
+
+----------------------------------------------------------------
+
+当当前任务处于禁止抢占状态时，通常意味着在执行某些临界区代码时，为了避免竞态条件，内核会禁止其他任务抢占当前任务。但在某些情况下，即使在禁止抢占的情况下，也可能需要重新调度，例如：
+
+假设有两个任务 A 和 B，A 是当前正在运行的任务，B 是就绪态，等待运行。任务 A 在执行某个临界区代码时，为了保护临界区不被其他任务抢占，禁止了抢占。
+
+现在发生了某种事件，例如硬件中断或者定时器中断，需要在中断处理程序中执行某些操作，但由于当前处于禁止抢占状态，不能立即切换到中断处理程序执行。然而，在中断处理程序执行完成后，可能需要重新调度，因为此时可能存在更高优先级的任务需要运行。
+
+在这种情况下，中断处理程序可以通过设置一个标志或者调用一个特殊的函数来表示需要重新调度。然后，在禁止抢占的临界区代码执行完毕后，检查这个标志或者调用特殊函数来确定是否需要重新调度。如果需要重新调度，则在禁止抢占的情况下，可以通过跳转到 `need_resched_nonpreemptible` 标签处来处理重新调度的逻辑。
+
+----------------------------------------------------------------
+
+
+为什么获取内核锁失败就要进行无法抢占下的重新调度？
+
+获取内核锁失败可能意味着当前无法获得对某些关键资源的访问权，这可能会导致无法继续进行某些关键的操作或者导致系统处于不一致的状态。在这种情况下，为了避免进一步的问题或者确保系统的一致性，可能需要进行重新调度。
+
+重新调度在这种情况下的作用是暂停当前任务的执行，允许其他任务继续执行，从而可能释放当前被占用的资源或者执行必要的清理操作。虽然这并不能解决内核锁获取失败的根本问题，但至少可以使系统继续运行并且避免更严重的后果。
+
+需要注意的是，无法抢占下的重新调度可能会导致系统的响应性下降或者性能受到影响，因为当前任务被迫暂停执行，而其他任务可能需要等待更长的时间才能获得执行机会。因此，重新调度应该作为一种紧急情况下的临时措施，并且应该尽可能地减少其发生的频率。

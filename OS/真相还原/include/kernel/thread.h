@@ -5,6 +5,10 @@
 #include "sched.h"
 #include "memory.h"
 #include "list.h"
+
+#define THREAD_SIZE 4096
+#define TASK_PAGE_SIZE 1
+
 typedef void thread_func(void*) ;
 
 enum task_status {
@@ -64,7 +68,9 @@ struct task_struct {
 	struct sched_entity se; // 调度实体
 	struct task_struct * parent; // 父进程
 	struct task_struct *group_leader;	/* threadgroup leader */
-
+	unsigned long nvcsw, nivcsw;	// 非自愿上下文切换（Involuntary Context Switch）
+					// 自愿上下文切换（Voluntary Context Switch）的次数。
+	
 	struct list_head thread_group;  // 当前进程的开的所有线程
 };
 
@@ -86,6 +92,13 @@ struct thread_info {
 	// __u8			supervisor_stack[0];
         uint32_t stack_magic;
 };
+
+register unsigned long current_stack_pointer asm("esp") __used;
+
+static inline struct thread_info *current_thread_info(void)
+{
+	return (struct thread_info *)(current_stack_pointer & ~(THREAD_SIZE - 1));
+}
 
 void thread_create(struct thread_info * pthread, thread_func function, void* func_arg);
 void init_thread(struct thread_info * pthread,char * name,uint8_t priority);

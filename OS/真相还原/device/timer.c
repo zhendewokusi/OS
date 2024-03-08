@@ -4,7 +4,7 @@
 #include "interrupt.h"
 #include "stdint.h"
 
-#define IRQ0_FREQUENCY	   100
+#define IRQ0_FREQUENCY	   1000		// 频率，这里是 1000 HZ
 #define INPUT_FREQUENCY	   1193180
 // #define COUNTER0_VALUE	   INPUT_FREQUENCY / IRQ0_FREQUENCY
 #define COUNTER0_VALUE	   5
