@@ -39,8 +39,6 @@
 #define TICK_NSEC (SH_DIV (1000000UL * 1000, ACTHZ, 8))
 
 
-// 建议编译器使用堆栈传参数而不用寄存器传参
-#define asmlinkage CPP_ASMLINKAGE __attribute__((regparm(0)))
 // 建议编译器及时没有被使用，也不要优化删除
 # define __used			__attribute__((__used__))
 // 位运算

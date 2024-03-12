@@ -5,6 +5,7 @@
 #include "sched.h"
 #include "memory.h"
 #include "list.h"
+#include "kernel.h"
 
 #define THREAD_SIZE 4096
 #define TASK_PAGE_SIZE 1
@@ -93,7 +94,10 @@ struct thread_info {
         uint32_t stack_magic;
 };
 
-register unsigned long current_stack_pointer asm("esp") __used;
+// register unsigned long current_stack_pointer __used __asm__("esp");
+register unsigned long current_stack_pointer __asm__("esp") __used;
+
+
 
 static inline struct thread_info *current_thread_info(void)
 {

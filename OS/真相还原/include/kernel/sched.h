@@ -1,14 +1,13 @@
 #ifndef __SCHED_H__
 #define __SCHED_H__
 
-#include <cstddef>
 #include "memory.h"
 #include "stdint.h"
 #include "linux/rbtree.h"
-#include "thread.h"
+// #include "thread.h"
 
 // 单独将调度器核心代码放置在一个段中，提高缓存命中,便于代码优化
-#define __shced __attribute__((__section__(".shced.text")));
+#define __sched __attribute__((__section__(".sched.text")))
 
 # define schedstat_inc(rq, field)	do { (rq)->field++; } while (0)
 # define schedstat_add(rq, field, amt)	do { (rq)->field += (amt); } while (0)
@@ -22,14 +21,13 @@
 #define sub_preempt_count(val) curr_preempt_count() -= (val)
 #define del_preempt_count() sub_preempt_count(1)
 
+// 默认负载权重
+#define SCHED_LOAD_SCALE	(1L << 10)
 
 
-struct load_weight {
-	unsigned long weight, inv_weight;
-};
 
 struct sched_entity {
-	struct load_weight	load;		/* for load-balancing */
+	uint64_t		load;
 	struct rb_node		run_node;
 	unsigned int		on_rq;
 	uint64_t		exec_start;
@@ -41,7 +39,7 @@ struct sched_entity {
 };
 
 struct cfs_rq {
-	struct load_weight load;
+	uint64_t load;
 	unsigned long nr_running;
 
 	uint64_t exec_clock;
@@ -49,42 +47,55 @@ struct cfs_rq {
 
 	struct rb_root tasks_timeline;
 	struct rb_node *rb_leftmost;
-	struct rb_node *rb_load_balance_curr;
 
 	struct sched_entity *curr, *next;
-
-	unsigned long nr_spread_over;
 };
 
 struct rq {
 	// runqueue lock
 	// ...
-	struct load_weight load;
+	uint64_t load;
 
 	// 一个记录实际的物理时间
 	//一个记录task运行的时间，这里如果发生中断等时间需要停止加
 	uint64_t clock;
 	struct task_struct *curr, *idle;	// 后者是空闲进程，当没有任务时候调用该进程（节能）
-	struct cfs_rq cfs;
+	struct cfs_rq* cfs;
 };
 
-// 实现时间记账功能
-static void update_curr(struct cfs_rq *cfs_rq);
-
+// 这里只有单个处理器，不涉及多核负载均衡等，简单处理
 static struct rq rq;
 static struct cfs_rq cfs_rq;
 
-#define INIT_STRUCT_CFSRQ(cfs_addr) do{	\
+// 实现时间记账功能
 
-}while(0);
 
-#define INIT_STRUCT_RQ(rq_addr) do{	\
-	rq_addr->load_weight = NULL;	\
-	rq_addr->clock = 0;		\
-	INIT_STRUCT_CFSRQ(cfs_addr)	\
-} while(0);
+
+#define INIT_STRUCT_CFSRQ(cfs_addr) do {  \
+    (cfs_addr)->load = SCHED_LOAD_SCALE;   \
+    (cfs_addr)->nr_running = 0;            \
+    (cfs_addr)->exec_clock = 0;            \
+    (cfs_addr)->min_vruntime = 0;          \
+    (cfs_addr)->tasks_timeline = RB_ROOT;     \
+    (cfs_addr)->rb_leftmost = NULL;        \
+    (cfs_addr)->curr = current_thread_info(); \
+    (cfs_addr)->next = NULL;               \
+} while(0)
+// (cfs_addr)->tasks_timeline = NULL;	这里需要写一个初始化红黑树的函数
+
+#define INIT_STRUCT_RQ(rq_addr,cfs_addr)	\
+    do{	(rq_addr)->load  = 0;			\
+	(rq_addr)->clock = 0;			\
+	(rq_addr)->curr = current_thread_info();\
+	(rq_addr)->idle = NULL;			\
+	(rq_addr)->cfs = cfs_addr;		\
+	INIT_STRUCT_CFSRQ(cfs_addr);		\
+} while(0)
 
 #endif
+
+static void update_curr(struct cfs_rq *cfs_rq);
+void __sched schedule_init();
 
 /*
 
