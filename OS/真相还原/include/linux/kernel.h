@@ -20,24 +20,17 @@
 // 计算
 #define LATCH  ((CLOCK_TICK_RATE + HZ/2) / HZ)	/* For divider */
 
-/* Suppose we want to devide two numbers NOM and DEN: NOM/DEN, then we can
- * improve accuracy by shifting LSH bits, hence calculating:
- *     (NOM << LSH) / DEN
- * This however means trouble for large NOM, because (NOM << LSH) may no
- * longer fit in 32 bits. The following way of calculating this gives us
- * some slack, under the following conditions:
- *   - (NOM / DEN) fits in (32 - LSH) bits.
- *   - (NOM % DEN) fits in (32 - LSH) bits.
- */
 #define SH_DIV(NOM,DEN,LSH) (   (((NOM) / (DEN)) << (LSH))              \
                              + ((((NOM) % (DEN)) << (LSH)) + (DEN) / 2) / (DEN))
 
 // 计算实际的系统时钟频率
 #define ACTHZ (SH_DIV (CLOCK_TICK_RATE, LATCH, 8))
 
-/* TICK_NSEC is the time between ticks in nsec assuming real ACTHZ */
+// 用于计算系统中定时器每次触发之间的时间间隔，单位为纳秒。
 #define TICK_NSEC (SH_DIV (1000000UL * 1000, ACTHZ, 8))
 
+// 
+#define JIFFIES_TO_NSEC(jiffies) ((jiffies) * TICK_NSEC)
 
 // 建议编译器及时没有被使用，也不要优化删除
 # define __used			__attribute__((__used__))

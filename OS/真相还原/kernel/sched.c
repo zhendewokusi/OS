@@ -3,7 +3,7 @@
 #include "thread.h"
 #include "timer.h"
 #include "sched.h"
-
+#include "traps.h"
 
 
 // static inline struct rq *rq_of(struct cfs_rq *cfs_rq)
@@ -47,20 +47,54 @@ static void update_curr(struct cfs_rq *cfs_rq)
         // 更新当前进程 curtask 的 CPU 使用情况统计信息（用于调度算法)
 }
 
+// 此处没有高精度计时器，使用节拍数来记录
+static void __update_rq_clock(struct rq * rq)
+{
+	uint64_t prev_raw = rq->prev_clock_raw;
+	uint64_t now = JIFFIES_TO_NSEC(jiffies_64);
+	int64_t delta = now - prev_raw;
+	uint64_t clock = rq->clock;
+
+	// 发生时钟回退
+	if(unlikely(delta < 0)) {
+		clock++;
+		rq->clock_warps++;
+	} else {
+		// 如果发生了太大的时间跳跃
+		if (unlikely(clock + delta > rq->tick_timestamp + TICK_NSEC)) {
+			if (clock < rq->tick_timestamp + TICK_NSEC)
+				clock = rq->tick_timestamp + TICK_NSEC;
+			else
+				clock++;
+			rq->clock_overflows++;
+		} else {
+			// 更新 clock 和 clock_max_delta
+			if (unlikely(delta > rq->clock_max_delta))
+				rq->clock_max_delta = delta;
+			clock += delta;
+		}
+	}
+	rq->prev_clock_raw = now;
+	rq->clock = clock;
+}
+
+
 // 主要调度器函数
 void __sched schedule()
 {
 	struct task_struct * prev,* next;
 	unsigned long *switch_count;
-
+	struct rq *now_rq;
 need_resched:
+	now_rq = &rq;			// 只有一个CPU,简单处理
 	inc_preempt_count();		// 禁止抢占
-	// 由于该OS是单处理器，就在sched.h直接定义了全局的 rq 和 cfs_rq
-	prev = rq.curr;
+	prev = now_rq->curr;
 	switch_count = &prev->nivcsw;
-	
-	// 释放先前进程的锁
+
 need_resched_nonpreemptible:
+	__CLI();			// 禁止本地中断
+	__update_rq_clock();		// 更新rq的时钟
+        // 搶 rq 鎖
 
 	return;
 }

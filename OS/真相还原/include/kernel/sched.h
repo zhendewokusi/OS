@@ -4,6 +4,7 @@
 #include "memory.h"
 #include "stdint.h"
 #include "linux/rbtree.h"
+#include "system.h"
 // #include "thread.h"
 
 // 单独将调度器核心代码放置在一个段中，提高缓存命中,便于代码优化
@@ -56,9 +57,12 @@ struct rq {
 	// ...
 	uint64_t load;
 
-	// 一个记录实际的物理时间
-	//一个记录task运行的时间，这里如果发生中断等时间需要停止加
-	uint64_t clock;
+	// clock 表示当前CPU 运行队列的时钟（CPU运行时间）
+	// prev_clock_raw 记录上一个
+	uint64_t clock,prev_clock_raw;
+	uint64_t clock_warps;
+	uint64_t tick_timestamp;
+	uint64_t clock_max_delta;
 	struct task_struct *curr, *idle;	// 后者是空闲进程，当没有任务时候调用该进程（节能）
 	struct cfs_rq* cfs;
 };
@@ -86,6 +90,10 @@ static struct cfs_rq cfs_rq;
 #define INIT_STRUCT_RQ(rq_addr,cfs_addr)	\
     do{	(rq_addr)->load  = 0;			\
 	(rq_addr)->clock = 0;			\
+	(rq_addr)->prev_clock_raw = 0;		\
+	(rq_addr)->clock_warps = 0;		\
+	(rq_addr)->tick_timestamp = 0;		\
+	(rq_addr)->clock_max_delta = 0;		\
 	(rq_addr)->curr = current_thread_info();\
 	(rq_addr)->idle = NULL;			\
 	(rq_addr)->cfs = cfs_addr;		\
@@ -96,6 +104,7 @@ static struct cfs_rq cfs_rq;
 
 static void update_curr(struct cfs_rq *cfs_rq);
 void __sched schedule_init();
+void __sched schedule();
 
 /*
 
