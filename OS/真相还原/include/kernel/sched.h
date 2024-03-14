@@ -45,7 +45,7 @@ struct rq {
 };
 
 struct cfs_rq {
-        struct load_weight load;
+        struct load_weight load;        // 中 weight 是 rq 中所有调度实体的 load 之和
         unsigned long nr_running;
         uint64_t exec_clock;
         uint64_t min_vruntime;

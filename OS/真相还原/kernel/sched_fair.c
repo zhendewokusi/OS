@@ -1,3 +1,5 @@
+#include "stdint.h"
+#include "kernel.h"
 #include "thread.h"
 #include "sched.h"
 #include "sched_fair.h"
@@ -8,6 +10,17 @@ unsigned int sysctl_sched_min_granularity		= 750000ULL;
 // 6ms
 unsigned int sysctl_sched_latency			= 6000000ULL;
 static unsigned int sched_nr_latency = 8;
+
+static inline int64_t find_prio_index(uint64_t val)
+{
+        for(int i = 0;i < 40;++i) {
+                if(sched_prio_to_weight[i] == val)
+                        return i;
+        }
+        // 如果发生错误了，返回默认的 weight 值
+        return 20;
+}
+
 /*
  * 函数作用： 找到并返回红黑树中的第一个公平调度实体对应的红黑树节点
  */
@@ -49,12 +62,42 @@ static uint64_t sched_slice(struct cfs_rq* cfs_rq,struct sched_entity* se)
 {
         uint64_t slice = __sched_period(cfs_rq->nr_running + !se->on_rq);
 }
-/*
- * 函数作用：
- */
-static  uint64_t  __calc_delta(struct sched_entity *se,uint64_t delta)
-{
 
+
+/*
+ * 该宏 SRR 定义了一个名为 "Shift Right and Round" 的操作，其功能是对给定的整数 x 进行右移 y 位的同时进行四舍五入。
+ * 这里的四舍五入是指在移位之前，先对 x 加上 (1UL << ((y) - 1)) 这个值，这样在右移时，最低位（即将被移出的位）若为1，则会触发进位，从而实现类似于浮点数除以2的向上（四舍五入）取整效果。
+ * 举个例子，假设 x = 0b1011，y = 2，那么：
+ * 先计算 1UL << ((y) - 1)，即 1UL << 1，结果为 0b10。
+ * 把这个值加到 x 上：0b1011 + 0b10 = 0b1100。
+ * 对结果进行右移 y 位：0b1100 >> 2，结果为 0b11。
+ * 原本右移两位不四舍五入的话结果是 0b1，而现在通过 SRR 宏实现了四舍五入得到了 0b11，这对于需要保留整数部分并进行近似操作的场景非常有用。
+ */
+#define SRR(x, y) (((x) + (1UL << ((y) - 1))) >> (y))
+
+/*
+ * 函数作用：计算根据weight和当前cfs_rq的总load调整后的 delta
+ * delta_exec : 当前调度周期长度
+ * q_load:        当前 *_rq 中的 load（这里只实现了cfs_rq）
+ * weight:      当前的sched_entity 的 load
+ */
+static unsigned long __calc_delta(uint64_t delta_exec,uint64_t weight,struct load_weight * q_load)
+{
+        // 如果倒数为 0
+        #define WMULT_CONST     (1UL << 32)
+        #define WMULT_SHIFT     32
+        if(unlikely(!q_load->inv_weight))
+                q_load->inv_weight = (WMULT_CONST - q_load->weight/2) / (q_load->weight + 1);
+        uint64_t tmp = delta_exec * weight;
+
+        if(unlikely(tmp > WMULT_CONST))
+                // 将高位数据丢弃，保留较低32位
+                tmp = SRR(SRR(tmp, WMULT_SHIFT/2) * q_load->inv_weight,
+                          WMULT_SHIFT/2);
+        else
+                tmp = SRR(tmp * q_load->inv_weight, WMULT_SHIFT);
+
+        return (unsigned long)min(tmp,(uint64_t)(unsigned long)LONG_MAX);
 }
 
 /*
@@ -62,8 +105,8 @@ static  uint64_t  __calc_delta(struct sched_entity *se,uint64_t delta)
  */
 static uint64_t calc_delta_fair(uint64_t delta,struct sched_entity* se)
 {
-        if(unlikely(se->load != NICE_0_LOAD)){
-                delta = __calc_delta(se,delta);
+        if(unlikely(se->load.weight != NICE_0_LOAD)){
+                delta = __calc_delta(se->load,delta);
         }
         return delta;
 }
