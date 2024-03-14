@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# 获取 bochs 设置（已弃用）
 # 获取上一级目录下的bochsrc.txt文件的路径
 bochsrc_path="../bochsrc.txt"
 
