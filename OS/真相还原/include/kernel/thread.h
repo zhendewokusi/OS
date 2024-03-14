@@ -70,8 +70,9 @@ struct task_struct {
 	struct task_struct * parent; // 父进程
 	struct task_struct *group_leader;	/* threadgroup leader */
 	unsigned long nvcsw, nivcsw;	// 非自愿上下文切换（Involuntary Context Switch）
-					// 自愿上下文切换（Voluntary Context Switch）的次数。
-	
+                                        // 自愿上下文切换（Voluntary Context Switch）的次数。
+
+        struct sched_class sched_class; // 调度实体
 	struct list_head thread_group;  // 当前进程的开的所有线程
 };
 
@@ -102,6 +103,11 @@ register unsigned long current_stack_pointer __asm__("esp") __used;
 static inline struct thread_info *current_thread_info(void)
 {
 	return (struct thread_info *)(current_stack_pointer & ~(THREAD_SIZE - 1));
+}
+
+static  inline struct task_struct* current(void)
+{
+        return current_thread_info()->task;
 }
 
 void thread_create(struct thread_info * pthread, thread_func function, void* func_arg);

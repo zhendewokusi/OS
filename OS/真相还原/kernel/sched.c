@@ -95,11 +95,25 @@ need_resched_nonpreemptible:
 	__CLI();			// 禁止本地中断
 	__update_rq_clock();		// 更新rq的时钟
         // 搶 rq 鎖
-
+        clear_task_need_resched(prev);  // 清除需要搶佔的標誌
+//        if(prev->)
 	return;
 }
 
-void __sched schedule_init()
+//void __sched schedule_init() {
+//	INIT_STRUCT_RQ(&rq, &cfs_rq);
+//}
+
+/*
+ * p 指向即将被创建的子进程的 task_struct 结构体。
+ */
+int schedule_fork(unsigned long clone_flags,struct  task_struct * p)
 {
-	INIT_STRUCT_RQ(&rq, &cfs_rq);
+    unsigned long tmp = clone_flags;
+    tmp++;
+    p->priority = current()->priority;
+    p->sched_class = &fair_sched_class; // 这里使用 CFS 调度类
+    if(p->sched_class.task_fork)
+        p->sched_class.task_fork(p);
+    return 0;
 }
