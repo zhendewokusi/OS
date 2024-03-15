@@ -2,6 +2,7 @@
 #define	_LINUX_RBTREE_H
 
 #include "stdint.h"
+#include "kernel.h"
 #ifndef NULL
 #define NULL ((void*)0)
 #endif

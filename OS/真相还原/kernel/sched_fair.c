@@ -21,6 +21,23 @@ static inline int64_t find_prio_index(uint64_t val)
         return 20;
 }
 
+static inline uint64_t max_vruntime(uint64_t min_vruntime, uint64_t vruntime)
+{
+        int64_t delta = (int64_t)(vruntime - min_vruntime);
+        if (delta > 0)
+                min_vruntime = vruntime;
+
+        return min_vruntime;
+}
+
+static inline uint64_t min_vruntime(uint64_t min_vruntime, uint64_t vruntime)
+{
+        int64_t delta = (int64_t)(vruntime - min_vruntime);
+        if (delta < 0)
+                min_vruntime = vruntime;
+
+        return min_vruntime;
+}
 /*
  * 函数作用： 找到并返回红黑树中的第一个公平调度实体对应的红黑树节点
  */
@@ -83,9 +100,9 @@ static uint64_t sched_slice(struct cfs_rq* cfs_rq,struct sched_entity* se)
  */
 static unsigned long __calc_delta(uint64_t delta_exec,uint64_t weight,struct load_weight * q_load)
 {
-        // 如果倒数为 0
         #define WMULT_CONST     (1UL << 32)
         #define WMULT_SHIFT     32
+        // 如果倒数为 0
         if(unlikely(!q_load->inv_weight))
                 q_load->inv_weight = (WMULT_CONST - q_load->weight/2) / (q_load->weight + 1);
         uint64_t tmp = delta_exec * weight;
@@ -101,7 +118,7 @@ static unsigned long __calc_delta(uint64_t delta_exec,uint64_t weight,struct loa
 }
 
 /*
- * 函数作用：根据任务的权重调整给定的时间片增量
+ * 函数作用：根据任务的权重调整给定的时间增量
  */
 static uint64_t calc_delta_fair(uint64_t delta,struct sched_entity* se)
 {
@@ -111,7 +128,7 @@ static uint64_t calc_delta_fair(uint64_t delta,struct sched_entity* se)
         return delta;
 }
 /*
- * 函数作用：计算要插入的任务的虚拟运行时间片
+ * 函数作用：计算要插入的任务的虚拟运行时间
  * 虚拟运行时间片 = 基本时间片 / 任务权重
  */
 static inline uint64_t sched_vslice(struct cfs_rq* cfs_rq,struct sched_entity* se)
@@ -131,14 +148,20 @@ static void place_entity(struct cfs_rq* cfs_rq,struct sched_entity* se,int initi
         // 这里默认开启，刚开始调度的时候会对其进行“记账”
         if(initial) {
                 vruntime += sched_vslice(cfs_rq,se);
+        } else {
+                // 给刚唤醒的进程减去一定的虚拟时间作为补偿
+                vruntime -= sysctl_sched_latency;
         }
+        // 补偿但是不能让虚拟时间进行倒退，不然就有问题(奖励多了[不是])
+        se->vruntime = max_vruntime(se->vruntime,vruntime);
 }
 
-static void task_new_fair(struct rq * rq, struct task_struct *p)
+static void task_fork_fair(struct rq * rq,struct task_struct *p)
 {
         struct sched_entity* se = &p->se,*curr = cfs_rq.curr;
         // 获取 rq lock
         // ...
+//        update_rq_clock();
         if(curr) {
                 // 更新当前正在运行的调度实体的运行时间信息
                 update_curr(&cfs_rq);
@@ -146,8 +169,87 @@ static void task_new_fair(struct rq * rq, struct task_struct *p)
         }
         // 更新调度实体的 vruntime（和 cfs_rq.min_vruntime 相差不能太大，否则疯狂占用CPU）
         place_entity(&cfs_rq, se, 1);
+        // 只留下相对虚拟时间，之后唤醒时会加上当前rq 的min_vruntime
+        se->vruntime -= cfs_rq.min_vruntime;
+        // 释放 rq lock
+        // ...
 
 }
+
+// 函数作用： 更新 cfs 的 min_vruntime
+static void update_min_vruntime(struct cfs_rq* cfs_rq)
+{
+        struct sched_entity* curr = cfs_rq->curr;
+        struct rb_node* leftmost = cfs_rq->rb_leftmost;
+        uint64_t vruntime = cfs_rq->min_vruntime;
+
+        if(curr) {
+                if(curr->on_rq)
+                        vruntime = curr->vruntime;
+                else
+                        curr = NULL;
+        }
+
+        if(leftmost) {
+                // 获取 leftmost 的 sched_entity
+                struct sched_entity* se;
+                se = rb_entry(leftmost,struct sched_entity,run_node);
+
+                if(!curr)
+                        vruntime = se->vruntime;
+                else
+                        vruntime = min_vruntime(vruntime,se->vruntime);
+        }
+        // 防止时钟回退
+        cfs_rq->min_vruntime = max_vruntime(cfs_rq->min_vruntime,vruntime);
+}
+
+
+
+
+//static inline void
+//__update_curr(struct cfs_rq *cfs_rq, struct sched_entity *curr,
+//	      unsigned long delta_exec)
+//{
+//	 unsigned long delta_exec_weighted;      // 记录任务运行时间的加权值
+//
+//	 schedstat_set(curr->exec_max, max((u64)delta_exec, curr->exec_max));
+//
+//	 curr->sum_exec_runtime += delta_exec;
+//	 schedstat_add(cfs_rq, exec_clock, delta_exec);
+//	 delta_exec_weighted = delta_exec;
+//	 if (unlikely(curr->load.weight != NICE_0_LOAD)) {
+//	 	delta_exec_weighted = calc_delta_fair(delta_exec_weighted,
+//	 						&curr->load);
+//	 }
+//	 curr->vruntime += delta_exec_weighted;
+//}
+
+
+// 更新当前正在运行的调度实体的运行时间信息
+static void update_curr(struct cfs_rq *cfs_rq)
+{
+        struct sched_entity * curr = cfs_rq->curr;
+        uint64_t now = rq_of(cfs_rq)->clock;
+
+        if (unlikely(!curr))
+                return;
+
+        unsigned long delta_exec = (unsigned long)(now - cfs_rq->exec_start);
+        // 异常，时钟回退
+        if(unlikely(int64_t)delta_exec <= 0)
+        return;
+
+//         __update_curr(cfs_rq, curr,delta_exec);
+
+        curr->exec_start = now;
+        curr->sum_exec_runtime += delta_exec;
+        curr->vruntime += calc_delta_fair(delta_exec,curr);
+
+        cfs_rq->exec_clock += delta_exec;
+        update_min_vruntime(cfs_rq);
+}
+
 
 static const struct  sched_class fair_sched_class = {
         next = &fair_sched_class,
