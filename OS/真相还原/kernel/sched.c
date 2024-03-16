@@ -3,7 +3,6 @@
 #include "thread.h"
 #include "timer.h"
 #include "sched.h"
-#include "traps.h"
 
 
 
@@ -13,8 +12,8 @@
  	return container_of(cfs_rq, struct rq, cfs);
  }
 
-// 此处没有高精度计时器，使用节拍数来记录
-static void __update_rq_clock(struct rq * rq)
+// 没有高精度计时器，使用节拍数来记录
+void __update_rq_clock(struct rq * rq)
 {
 	uint64_t prev_raw = rq->prev_clock_raw;
 	uint64_t now = JIFFIES_TO_NSEC(jiffies_64);
@@ -82,4 +81,16 @@ int schedule_fork(unsigned long clone_flags,struct  task_struct * p)
     if(p->sched_class.task_fork)
         p->sched_class.task_fork(p);
     return 0;
+}
+
+void wake_up_new_task(struct task_struct * p)
+{
+        struct rq * rq;
+        p->status = TASK_RUNNING;
+        // 锁
+        // ...
+        __update_rq_clock(rq);
+        p->sched_class.enqueue_task(rq,p,0);
+        // 释放锁
+        // ...
 }

@@ -13,9 +13,9 @@
 typedef void thread_func(void*) ;
 
 enum task_status {
+        TASK_DIED,      // 任务死亡
 	TASK_RUNNING,   // 任务运行中
 	TASK_READY,     // 任务就绪
-	TASK_DIED,      // 任务死亡
 	TASK_WAITING,
 };
 
@@ -64,6 +64,7 @@ struct thread_stack {
 
 // 进程控制块
 struct task_struct {
+        enum task_status status;
 	uint8_t priority;
 	char name[16];
 	struct sched_entity se; // 调度实体

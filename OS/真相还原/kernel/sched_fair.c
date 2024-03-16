@@ -11,6 +11,14 @@ unsigned int sysctl_sched_min_granularity		= 750000ULL;
 unsigned int sysctl_sched_latency			= 6000000ULL;
 static unsigned int sched_nr_latency = 8;
 
+static inline void account_entity_enqueue(struct cfs_rq *cfs_rq,struct sched_entity* se)
+{
+        update_load_add(&cfs_rq->load,se->load.weight);
+        cfs_rq->nr_running++;
+        se->on_rq = 1;
+}
+
+
 static inline int64_t find_prio_index(uint64_t val)
 {
         for(int i = 0;i < 40;++i) {
@@ -128,7 +136,7 @@ static uint64_t calc_delta_fair(uint64_t delta,struct sched_entity* se)
         return delta;
 }
 /*
- * 函数作用：计算要插入的任务的虚拟运行时间
+ * 函数作用：惩罚的时间计算函数
  * 虚拟运行时间片 = 基本时间片 / 任务权重
  */
 static inline uint64_t sched_vslice(struct cfs_rq* cfs_rq,struct sched_entity* se)
@@ -161,7 +169,8 @@ static void task_fork_fair(struct rq * rq,struct task_struct *p)
         struct sched_entity* se = &p->se,*curr = cfs_rq.curr;
         // 获取 rq lock
         // ...
-//        update_rq_clock();
+        __update_rq_clock(rq);
+
         if(curr) {
                 // 更新当前正在运行的调度实体的运行时间信息
                 update_curr(&cfs_rq);
@@ -250,8 +259,64 @@ static void update_curr(struct cfs_rq *cfs_rq)
         update_min_vruntime(cfs_rq);
 }
 
+static inline int entity_before(struct sched_entity *a, struct sched_entity *b)
+{
+        return (s64)(a->vruntime - b->vruntime) < 0;
+}
+
+static void __enqueue_entity(struct cfs_rq* cfs_rq,struct sched_entity* se)
+{
+        struct rb_node ** link = &cfs_rq->tasks_timeline.rb_node;
+        struct rb_node *parent = NULL;
+        struct sched_entity* entry = NULL;
+        uint8_t left_most = 1;
+        while(*link) {
+                parent = *link;
+                entry = rb_entry(parent,struct sched_entity,run_node);
+                if(entity_before(se,entry)) {
+                        link = &parent->rb_left;
+                }else{
+                        link = &parent->rb_right;
+                        left_most = 0;
+                }
+        }
+        // 保持 vruntime 单调递增
+        if(left_most) {
+                cfs_rq->rb_leftmost = &se->run_node;
+                cfs_rq->min_vruntime =
+                        max_vruntime(cfs_rq->min_vruntime,se->vruntime);
+        }
+        // 节点链接到树中
+        rb_link_node(&se->run_node,parent,link);
+        // 维护红黑树
+        rb_insert_color(&se->run_node,&cfs_rq->tasks_timeline);
+}
+
+static void enqueue_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags)
+{
+        // 更新调度信息
+        update_curr(cfs_rq);
+        // 之前task_fork_fair中减去的，现在加上
+        se->vruntime += cfs_rq->min_vruntime;
+        // 更新就绪队列相关信息
+        account_entity_enqueue(cfs_rq,se);
+        // 将其添加到红黑树上
+        if(cfs_rq->curr == se)
+                __enqueue_entity(cfs_rq,se);
+
+}
+
+static void enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
+{
+        struct cfs_rq * cfs = &cfs_rq;
+        struct sched_entity* se = &p->se;
+        // 这里如果有开启组调用，就需要循环将组内每个entity都遍历
+        enqueue_entity(cfs,se,1);
+        rq->nr_running += 1;
+}
 
 static const struct  sched_class fair_sched_class = {
         next = &fair_sched_class,
         task_fork = &task_fork_fair,
+        enqueue_task = enqueue_task_fair,
 };

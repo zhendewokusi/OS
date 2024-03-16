@@ -5,6 +5,8 @@
 #include "stdint.h"
 #include "linux/rbtree.h"
 #include "system.h"
+#include "list.h"
+
 // #include "thread.h"
 // 单独将调度器核心代码放置在一个段中，提高缓存命中,便于代码优化
 #define __sched __attribute__((__section__(".sched.text")))
@@ -34,6 +36,7 @@ struct rq {
 	// runqueue lock
 	// ...
         struct load_weight load;
+        unsigned long nr_running;
 	// clock 表示当前CPU 运行队列的时钟（CPU运行时间）
 	// prev_clock_raw 记录上一个
 	uint64_t clock,prev_clock_raw;
@@ -42,6 +45,7 @@ struct rq {
 	uint64_t clock_max_delta;
 	struct task_struct *curr, *idle;	// 后者是空闲进程，当没有任务时候调用该进程（节能）
 	struct cfs_rq* cfs;
+        struct list_head cfs_tasks;
 };
 
 struct cfs_rq {
@@ -170,6 +174,9 @@ const u32 sched_prio_to_wmult[40] = {
 // 这里只有单个处理器，不涉及多核负载均衡等，简单处理
 static struct rq rq;
 static struct cfs_rq cfs_rq;
+
+void __update_rq_clock(struct rq * rq);
+
 #endif
 /*
  *   根据当前系统的情况计算targeted latency（调度周期），在这个调度周期中计算当前进程应该获得的时间片（物理时间），然后计算当前进程已经累积执行的物理时间，如果大于当前应该获得的时间片，那么更新本进程的vruntime并标记need resched flag，并在最近的一个调度点发起调度。
